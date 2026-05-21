@@ -55,6 +55,35 @@ h1 small {
     margin-top: 2px;
 }
 
+.locale-switcher {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.locale-btn {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.locale-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.locale-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+}
+
 .main-content {
     max-width: 800px;
     margin: 0 auto;

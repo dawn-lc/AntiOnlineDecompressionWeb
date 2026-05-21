@@ -23,13 +23,13 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             case 'INIT_ENCRYPT': {
                 chunkCounter = 0;
                 byteCounter = 0;
-                console.log('[Worker] INIT_ENCRYPT 开始...');
+                console.debug('[Worker] INIT_ENCRYPT 开始...');
                 const sodium = await getSodium();
-                console.log('[Worker] Sodium 加载完成, 创建 StreamEncryptor...');
+                console.debug('[Worker] Sodium 加载完成, 创建 StreamEncryptor...');
                 encryptor = await StreamEncryptor.create(sodium);
                 const header = encryptor.getHeader();
                 const key = encryptor.key;
-                console.log(`[Worker] StreamEncryptor 创建完成, header=${header.length}bytes, key=${key.length}bytes`);
+                console.debug(`[Worker] StreamEncryptor 创建完成, header=${header.length}bytes, key=${key.length}bytes`);
                 // 发送 header 和 key 到主线程
                 postToMain({ type: 'READY', header, key });
                 break;
@@ -42,11 +42,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 chunkCounter++;
                 byteCounter += msg.chunk.length;
                 if (chunkCounter % 10 === 1) {
-                    console.log(`[Worker] ENCRYPT_CHUNK #${chunkCounter}, size=${msg.chunk.length}, total=${byteCounter}, isLast=${msg.isLast}`);
+                    console.debug(`[Worker] ENCRYPT_CHUNK #${chunkCounter}, size=${msg.chunk.length}, total=${byteCounter}, isLast=${msg.isLast}`);
                 }
                 const encrypted = encryptor.push(msg.chunk, msg.isLast);
                 if (msg.isLast) {
-                    console.log(`[Worker] 加密完成! 共 ${chunkCounter} 个chunk, ${byteCounter} bytes`);
+                    console.debug(`[Worker] 加密完成! 共 ${chunkCounter} 个chunk, ${byteCounter} bytes`);
                 }
                 postToMain({ type: 'CHUNK_RESULT', data: encrypted, isLast: msg.isLast });
                 break;
@@ -54,11 +54,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             case 'INIT_DECRYPT': {
                 chunkCounter = 0;
                 byteCounter = 0;
-                console.log(`[Worker] INIT_DECRYPT 开始... key=${msg.key?.length}bytes, header=${msg.header?.length}bytes`);
+                console.debug(`[Worker] INIT_DECRYPT 开始... key=${msg.key?.length}bytes, header=${msg.header?.length}bytes`);
                 const sodium = await getSodium();
-                console.log('[Worker] Sodium 加载完成, 创建 StreamDecryptor...');
+                console.debug('[Worker] Sodium 加载完成, 创建 StreamDecryptor...');
                 decryptor = StreamDecryptor.create(sodium, msg.key, msg.header);
-                console.log('[Worker] StreamDecryptor 创建完成');
+                console.debug('[Worker] StreamDecryptor 创建完成');
                 postToMain({ type: 'DECRYPT_READY' });
                 break;
             }
@@ -70,17 +70,16 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 chunkCounter++;
                 byteCounter += msg.chunk.length;
                 if (chunkCounter % 10 === 1) {
-                    console.log(`[Worker] DECRYPT_CHUNK #${chunkCounter}, size=${msg.chunk.length}, total=${byteCounter}, isLast=${msg.isLast}`);
+                    console.debug(`[Worker] DECRYPT_CHUNK #${chunkCounter}, size=${msg.chunk.length}, total=${byteCounter}, isLast=${msg.isLast}`);
                 }
                 const result = decryptor.pull(msg.chunk);
                 if (!result || !result.message) {
-                    // pull 返回空结果，可能是数据不完整或验证失败
                     postToMain({ type: 'ERROR', message: `解密块 #${chunkCounter} 失败: pull 返回空结果` });
                     break;
                 }
                 const isLast = decryptor.isFinalTag(result.tag);
                 if (chunkCounter % 10 === 1) {
-                    console.log(`[Worker] DECRYPT_CHUNK #${chunkCounter} 结果: message=${result.message.length}bytes, tag=${result.tag}, isLast=${isLast}`);
+                    console.debug(`[Worker] DECRYPT_CHUNK #${chunkCounter} 结果: message=${result.message.length}bytes, tag=${result.tag}, isLast=${isLast}`);
                 }
                 postToMain({ type: 'CHUNK_RESULT', data: result.message, isLast });
                 break;
@@ -89,13 +88,13 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 const sodium = await getSodium();
                 if (!hasher) {
                     hasher = HashCalculator.create(sodium);
-                    console.log('[Worker] HashCalculator 创建完成');
+                    console.debug('[Worker] HashCalculator 创建完成');
                 }
                 hasher.update(msg.chunk);
                 if (msg.isLast) {
                     const hash = hasher.final();
-                    hasher = null; // reset for next use
-                    console.log(`[Worker] 哈希计算完成: ${hash.length}bytes`);
+                    hasher = null;
+                    console.debug(`[Worker] 哈希计算完成: ${hash.length}bytes`);
                     postToMain({ type: 'HASH_RESULT', hash });
                 }
                 break;
@@ -108,5 +107,4 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     }
 };
 
-// 暴露 getSodium 以便其他模块使用（如果有需要）
-console.log('[Worker] CryptoWorker 已加载');
+console.debug('[Worker] CryptoWorker 已加载');

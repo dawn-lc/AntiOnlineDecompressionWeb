@@ -1,12 +1,14 @@
 import { EventBus } from '../shared/EventBus';
 import { FileIOManager } from './FileIOManager';
-import { KeyFileManager } from './KeyFileManager';
 import { HeaderSerializer } from '../shared/schemas/serializer';
 import type { MainThreadMessage } from '../shared/MessageTypes';
 import { AODF_HEADER_SIZE, CHUNK_SIZE, ABYTES } from '../shared/constants';
 import { createFileSaver } from './SaveHelper';
 import type { FileSaver } from './SaveHelper';
 import { formatBytes } from '../shared/formatBytes';
+import { computeFileHash } from '../shared/computeFileHash';
+import { compareUUID } from '../shared/compareUUID';
+import { t } from '../shared/i18n';
 
 export class AppController {
     private worker: Worker | null = null;
@@ -21,7 +23,6 @@ export class AppController {
     constructor(
         private eventBus: EventBus,
         private fileIO: FileIOManager,
-        private keyFile: KeyFileManager,
     ) {
         // 监听取消事件，中断正在进行的加解密
         eventBus.on('cancel', () => {
@@ -37,7 +38,7 @@ export class AppController {
             const msg = e.data;
             switch (msg.type) {
                 case 'READY': {
-                    console.log('[AppController] Worker READY: key=', msg.key.length, 'header=', msg.header.length);
+                    console.debug('[AppController] Worker READY: key=', msg.key.length, 'header=', msg.header.length);
                     this.resolveWorkerReady?.({ header: msg.header, key: msg.key });
                     break;
                 }
@@ -46,11 +47,11 @@ export class AppController {
                     break;
                 }
                 case 'HASH_RESULT': {
-                    console.log(`[Hash] 文件哈希计算完成: ${Array.from(msg.hash).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16)}...`);
+                    console.debug(`[Hash] 文件哈希计算完成: ${Array.from(msg.hash).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16)}...`);
                     break;
                 }
                 case 'DECRYPT_READY': {
-                    console.log('[AppController] DECRYPT_READY 收到');
+                    console.debug('[AppController] DECRYPT_READY 收到');
                     this.resolveDecryptReady?.();
                     break;
                 }
@@ -73,10 +74,8 @@ export class AppController {
     /** 加密主流程 */
     async encrypt(file: File): Promise<void> {
         this.eventBus.emit('start');
-        console.log(`[加密] 开始加密文件: ${file.name} (${formatBytes(file.size)})`);
+        console.info(t('console.encryptStart', { name: file.name, size: formatBytes(file.size) }));
 
-        // 必须在任何 await 之前弹出保存对话框（浏览器要求 showSaveFilePicker 在用户手势中调用）
-        // 移动端不支持 showSaveFilePicker，回退到 Blob 下载
         let aodkSaver = await createFileSaver(`${file.name}.aodk`);
         let aodfSaver = await createFileSaver(`${file.name}.aodf`);
 
@@ -84,27 +83,20 @@ export class AppController {
         const signal = this.abortController.signal;
 
         try {
-            // 1. 初始化 Worker
             await this.initWorker();
-
-            // 2. 发送 INIT_ENCRYPT 到 Worker，等待返回 stream header 和 key
             const { key, header: streamHeader } = await this.sendAndWaitForEncryptReady();
-            console.log(`[AppController] 得到真实加密 key: ${key.length}bytes, streamHeader: ${streamHeader.length}bytes`);
+            console.debug(`[AppController] 得到真实加密 key: ${key.length}bytes, streamHeader: ${streamHeader.length}bytes`);
 
-            // 3. 写入 AODF Header + stream header 到输出
             const uuid = crypto.getRandomValues(new Uint8Array(32));
             const aodfHeaderBuf = HeaderSerializer.serializeAODF({
                 magic: new Uint8Array([0x41, 0x4F, 0x44, 0x46]),
                 version: 1,
-                uuid,
                 headerSize: AODF_HEADER_SIZE,
+                uuid,
             });
             await aodfSaver.write(aodfHeaderBuf.slice(0) as ArrayBuffer);
-            const streamHeaderBuf = streamHeader.slice(0).buffer as ArrayBuffer;
-            await aodfSaver.write(streamHeaderBuf);
 
-            // 4. 流式加密
-            console.log(`[AppController] 开始流式加密, 文件大小: ${file.size}bytes`);
+            console.info(`[AppController] 开始流式加密, 文件大小: ${file.size}bytes`);
             this.eventBus.emit('progressUpdate', 0, file.size);
             let encryptBytesDone = 0;
             let lastProgressTime = 0;
@@ -125,19 +117,19 @@ export class AppController {
                 }
             }, signal);
 
-            // 5. 关闭 AODF 输出
+            if (signal.aborted) {
+                throw new DOMException('操作已取消', 'AbortError');
+            }
+
             await aodfSaver.close();
             aodfSaver = null as any;
-
-            // 6. 确保进度条显示 100%
             this.eventBus.emit('progressUpdate', file.size, file.size);
 
-            // 7. 计算文件哈希
+            // 计算文件哈希
             const originalFileSize = BigInt(file.size);
             const filenameBytes = new TextEncoder().encode(file.name);
-            const fileHash = await this.computeFileHash(file);
+            const fileHash = await computeFileHash(file);
 
-            // 8. 构建并写入 AODK 密钥文件
             const aodkHeader = {
                 magic: new Uint8Array([0x41, 0x4F, 0x44, 0x4B]),
                 version: 1,
@@ -149,6 +141,7 @@ export class AppController {
                 originalFileSize,
                 filenameLength: filenameBytes.length,
                 filename: file.name,
+                attachment: undefined,
             };
             const aodkBuffer = HeaderSerializer.serializeAODK(aodkHeader);
             const aodkBuf = aodkBuffer.slice(0) as ArrayBuffer;
@@ -156,17 +149,16 @@ export class AppController {
             await aodkSaver.close();
             aodkSaver = null as any;
 
-            // 9. 清理
             this.cleanupWorker();
-            console.log(`[加密] 密钥文件已保存: ${file.name}.aodk`);
-            console.log('[加密] 加密完成！AODK 密钥文件和 AODF 加密文件已保存。');
+            console.info(`[加密] 密钥文件已保存: ${file.name}.aodk`);
+            console.info(t('console.encryptComplete'));
             this.eventBus.emit('complete');
             this.eventBus.emit('statusChange', 'done');
         } catch (err: any) {
             try { aodfSaver?.close(); } catch { }
             try { aodkSaver?.close(); } catch { }
             if (err.name === 'AbortError') {
-                console.log('[加密] 操作已取消');
+                console.warn(t('console.cancelled'));
             } else {
                 const msg = err instanceof Error ? err.message : String(err);
                 this.eventBus.emit('error', `加密失败: ${msg}`);
@@ -179,21 +171,20 @@ export class AppController {
     /** 解密主流程 */
     async decrypt(aodkFile: File, aodfFile: File): Promise<void> {
         this.eventBus.emit('start');
-        console.log(`[解密] 开始解密文件: ${aodfFile.name}`);
+        console.info(t('console.decryptStart', { name: aodfFile.name }));
 
         this.abortController = new AbortController();
         const signal = this.abortController.signal;
         let outputSaver: FileSaver | null = null;
 
         try {
-            // 1. 解析 AODK 文件，获取原始文件名
-            const aodkHeader = await this.keyFile.parseAODKFile(aodkFile);
+            const aodkHeader = await this.fileIO.parseAODKFile(aodkFile);
             const key = aodkHeader.key;
             const streamHeader = aodkHeader.nonce;
             const originalFilename = aodkHeader.filename;
 
-            console.log(`[Decrypt] 原始文件名: ${originalFilename}`);
-            console.log(`[Decrypt] 原始文件大小: ${formatBytes(Number(aodkHeader.originalFileSize))}`);
+            console.info(`[Decrypt] 原始文件名: ${originalFilename}`);
+            console.info(`[Decrypt] 原始文件大小: ${formatBytes(Number(aodkHeader.originalFileSize))}`);
 
             // 使用原始文件名作为保存文件名（后缀名自动保留）
             const suggestedName = originalFilename || 'decrypted_output';
@@ -209,18 +200,18 @@ export class AppController {
             // 4. 验证 UUID 匹配
             const aodkUUID = aodkHeader.uuid;
             const aodfUUID = aodfHeader.uuid;
-            if (!this.compareUUID(aodkUUID, aodfUUID)) {
+            if (!compareUUID(aodkUUID, aodfUUID)) {
                 throw new Error('AODK 文件与 AODF 文件的 UUID 不匹配，无法解密');
             }
-            console.log('[Decrypt] UUID 验证通过');
+            console.info('[Decrypt] UUID 验证通过');
 
             // 5. 发送 INIT_DECRYPT 到 Worker 并等待 DECRYPT_READY
-            console.log(`[AppController] 发送 INIT_DECRYPT: key=${key.length}bytes, streamHeader=${streamHeader.length}bytes`);
+            console.debug(`[AppController] 发送 INIT_DECRYPT: key=${key.length}bytes, streamHeader=${streamHeader.length}bytes`);
             await this.sendDecryptInit(key, streamHeader);
 
-            // 6. 使用 ReadableStream 流式解密（跳过 AODF Header + stream header）
-            const bodyOffset = AODF_HEADER_SIZE + streamHeader.length;
-            console.log(`[AppController] 读取加密体, offset=${bodyOffset}, 文件总大小=${aodfFile.size}`);
+            // 6. 使用 ReadableStream 流式解密（跳过 AODF Header）
+            const bodyOffset = AODF_HEADER_SIZE;
+            console.info(`[AppController] 读取加密体, offset=${bodyOffset}, 文件总大小=${aodfFile.size}`);
             this.eventBus.emit('progressUpdate', 0, aodfFile.size - bodyOffset);
 
             const totalBodySize = aodfFile.size - bodyOffset;
@@ -310,6 +301,11 @@ export class AppController {
                 }
             }
 
+            // 检查是否被取消
+            if (signal?.aborted) {
+                throw new DOMException('操作已取消', 'AbortError');
+            }
+
             // 消费流中可能剩余的尾部数据（安全兜底）
             if (!signal?.aborted) {
                 while (buffer.length > 0) {
@@ -343,12 +339,12 @@ export class AppController {
 
             this.cleanupWorker();
             this.eventBus.emit('complete');
-            console.log(`[解密] 解密完成！文件已保存为: ${originalFilename}`);
+            console.info(t('console.decryptComplete', { name: originalFilename }));
             this.eventBus.emit('statusChange', 'done');
         } catch (err: any) {
             try { outputSaver?.close(); } catch { }
             if (err.name === 'AbortError' || err.name === 'SecurityError') {
-                console.log('[解密] 操作已取消');
+                console.warn(t('console.cancelled'));
             } else {
                 const msg = err instanceof Error ? err.message : String(err);
                 this.eventBus.emit('error', `解密失败: ${msg}`);
@@ -433,64 +429,6 @@ export class AppController {
                 { transfer }
             );
         });
-    }
-
-    /** 计算文件哈希（BLAKE2b 增量哈希） */
-    private async computeFileHash(file: File): Promise<Uint8Array> {
-        return new Promise((resolve, reject) => {
-            const stream = file.stream();
-            const reader = stream.getReader();
-
-            const hashWorker = new Worker('worker.js', { type: 'module' });
-
-            hashWorker.onmessage = (e: MessageEvent<any>) => {
-                const msg = e.data;
-                if (msg.type === 'HASH_RESULT') {
-                    hashWorker.terminate();
-                    resolve(msg.hash);
-                } else if (msg.type === 'ERROR') {
-                    hashWorker.terminate();
-                    reject(new Error(msg.message));
-                }
-            };
-
-            hashWorker.onerror = (err) => {
-                hashWorker.terminate();
-                reject(new Error(`Hash Worker 错误: ${err.message}`));
-            };
-
-            hashWorker.postMessage({ type: 'INIT_ENCRYPT' });
-
-            (async () => {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        hashWorker.postMessage({ type: 'COMPUTE_HASH', chunk: new Uint8Array(0), isLast: true });
-                        break;
-                    }
-                    let offset = 0;
-                    while (offset < value.length) {
-                        const end = Math.min(offset + 65536, value.length);
-                        const chunk = value.slice(offset, end);
-                        offset = end;
-                        hashWorker.postMessage(
-                            { type: 'COMPUTE_HASH', chunk, isLast: false },
-                            chunk.buffer.byteLength > 0 ? { transfer: [chunk.buffer] } as any : {}
-                        );
-                    }
-                }
-            })().catch(reject);
-        });
-    }
-
-    /** 比较两个 UUID 是否相等 */
-    private compareUUID(a: Uint8Array, b: Uint8Array): boolean {
-        if (a.length !== b.length) return false;
-        let result = 0;
-        for (let i = 0; i < a.length; i++) {
-            result |= a[i] ^ b[i];
-        }
-        return result === 0;
     }
 
     /** 清理 Worker */

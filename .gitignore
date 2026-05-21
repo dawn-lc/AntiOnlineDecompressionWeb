@@ -1,5 +1,7 @@
 /node_modules
 /temp
-/test
-/test-temp
 /dist
+
+# 测试数据与输出（不跟踪大二进制文件）
+/test/fixtures/
+/test/output/

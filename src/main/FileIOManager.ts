@@ -1,6 +1,18 @@
 import { CHUNK_SIZE } from '../shared/constants';
+import { HeaderSerializer } from '../shared/schemas/serializer';
+import type { AODKHeader } from '../shared/schemas/aodk';
 
 export class FileIOManager {
+    /** 读取并解析 AODK 密钥文件 */
+    async parseAODKFile(file: File): Promise<AODKHeader> {
+        const buffer = await file.arrayBuffer();
+        const header = HeaderSerializer.deserializeAODK(buffer);
+        if (!HeaderSerializer.validateAODKMagic(header.magic)) {
+            throw new Error('无效的 AODK 文件：Magic 字节不匹配');
+        }
+        return header;
+    }
+
     /** 从用户选择的文件中读取指定长度的字节（用于读取 AODK/AODF 头部） */
     async readHeaderFromFile(file: File, size: number): Promise<ArrayBuffer> {
         const blob = file.slice(0, size);

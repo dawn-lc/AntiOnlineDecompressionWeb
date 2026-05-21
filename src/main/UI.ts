@@ -1,6 +1,7 @@
 import { EventBus } from '../shared/EventBus';
 import { formatBytes } from '../shared/formatBytes';
 import { requestPopupPermission } from './SaveHelper';
+import { t } from '../shared/i18n';
 
 /** 从 DOM 中取元素的简写 */
 const getById = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -27,12 +28,13 @@ export class UI {
         decryptTab: document.querySelector<HTMLButtonElement>('[data-tab="decrypt"]')!,
     } as const;
 
-    /** 各按钮的原始文本，用于操作结束后恢复 */
-    private static BTN_LABELS = {
-        encrypt: '🔒 加密文件',
-        decrypt: '🔓 解密文件',
-    };
-    private static CANCEL_LABEL = '✕ 取消';
+    /** 按钮标签（由 i18n 驱动，不能缓存静态值） */
+    private static btnLabel(key: 'encrypt' | 'decrypt'): string {
+        return key === 'encrypt' ? t('encrypt.btn') : t('decrypt.btn');
+    }
+    private static cancelLabel(): string {
+        return t('common.cancel');
+    }
 
     private selectedFile: File | null = null;
     private selectedAodk: File | null = null;
@@ -105,7 +107,7 @@ export class UI {
         });
     }
 
-    /** 配置解密文件选择行（aodk / aodf） */
+    /** 配置解密文件选择行 */
     private setupDecryptInput(
         type: 'aodk' | 'aodf',
         onSelect: (file: File) => void,
@@ -200,7 +202,7 @@ export class UI {
     private resetDecryptRow(type: 'aodk' | 'aodf'): void {
         const row = type === 'aodk' ? this.el.decryptAodkRow : this.el.decryptAodfRow;
         const nameEl = type === 'aodk' ? this.el.decryptAodkName : this.el.decryptAodfName;
-        nameEl.textContent = `点击选择${type === 'aodk' ? '密钥' : '加密'}文件`;
+        nameEl.textContent = type === 'aodk' ? t('decrypt.keyPlaceholder') : t('decrypt.dataPlaceholder');
         nameEl.classList.add('empty');
         row.classList.remove('has-file');
     }
@@ -210,7 +212,7 @@ export class UI {
         // 判断哪个面板当前激活，将其按钮切换为取消按钮
         const isEncrypt = (location.hash.slice(1) || 'encrypt').toLowerCase() !== 'decrypt';
         const btn = isEncrypt ? this.el.encryptBtn : this.el.decryptBtn;
-        btn.textContent = UI.CANCEL_LABEL;
+        btn.textContent = UI.cancelLabel();
         btn.className = 'btn btn-danger';
         btn.disabled = false;
         // 禁用另一面板的按钮（防止切换）
@@ -222,7 +224,7 @@ export class UI {
 
     onCancel(): void {
         this.isBusy = false;
-        console.log('操作已取消');
+        console.warn(t('console.cancelled'));
         this.restoreButtons();
         this.el.progressSection.classList.remove('visible');
         this.el.progressBar.style.width = '0%';
@@ -233,8 +235,8 @@ export class UI {
 
     /** 恢复两个按钮到初始状态 */
     private restoreButtons(): void {
-        this.el.encryptBtn.textContent = UI.BTN_LABELS.encrypt;
-        this.el.decryptBtn.textContent = UI.BTN_LABELS.decrypt;
+        this.el.encryptBtn.textContent = UI.btnLabel('encrypt');
+        this.el.decryptBtn.textContent = UI.btnLabel('decrypt');
         this.el.encryptBtn.className = 'btn btn-primary';
         this.el.decryptBtn.className = 'btn btn-primary';
         this.el.encryptBtn.disabled = true;
@@ -246,7 +248,7 @@ export class UI {
             requestPopupPermission();
             if (this.isBusy) { this.eventBus.emit('cancel'); return; }
             if (this.selectedFile) callback(this.selectedFile);
-            else console.error('请先选择要加密的文件');
+            else console.error(t('error.selectFile'));
         });
     }
 
@@ -255,7 +257,7 @@ export class UI {
             requestPopupPermission();
             if (this.isBusy) { this.eventBus.emit('cancel'); return; }
             if (this.selectedAodk && this.selectedAodf) callback(this.selectedAodk, this.selectedAodf);
-            else console.error('请同时选择密钥文件和加密文件');
+            else console.error(t('error.selectBoth'));
         });
     }
 

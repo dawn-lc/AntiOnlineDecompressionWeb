@@ -1,23 +1,11 @@
-/**
- * 保存文件辅助模块
- *
- * 优先级（自动择优）：
- *   1. File System Access API（showSaveFilePicker）— 桌面端 + Chrome Android
- *   2. showDirectoryPicker + OPFS — Chrome Android 86+
- *   3. OPFS 中间存储 + Blob URL — 支持 OPFS 的浏览器，处理过程低内存
- *   4. ServiceWorker 流式下载 — 弹窗方案，但同样保持低内存
- *   5. 纯内存 Blob + <a> 下载 — 高内存占用，仅作为最终回退
- */
+/** 保存文件辅助模块，按 FSAA → OPFS → SW → 内存 Blob 优先级自动降级 */
 
 export interface FileSaver {
     write(data: ArrayBuffer | Uint8Array): Promise<void>;
     close(): Promise<void>;
 }
 
-// ── SW 流式下载相关 ──────────────────────────────────────
-
 let swReady = false;
-/** 弹窗权限是否已确认（用户允许弹出窗口） */
 let popupAllowed = false;
 
 /** 注册 ServiceWorker（不阻塞主流程），用于流式下载回退 */
@@ -40,7 +28,7 @@ export function requestPopupPermission(): void {
         if (win) {
             popupAllowed = true;
             win.close();
-            console.log('[权限] 弹窗: ✅ 已允许');
+            console.info('[权限] 弹窗: ✅ 已允许');
         } else {
             console.warn('[权限] 弹窗: ❌ 被拦截，请允许此网站弹出窗口以使用流式下载');
         }
@@ -53,15 +41,7 @@ function isSWReady(): boolean {
     return swReady && navigator.serviceWorker.controller !== null;
 }
 
-// ── 权限申请 ──────────────────────────────────────────────
-
-/**
- * 申请浏览器所需权限。
- * 当前申请：
- *   - persistent-storage: 确保 OPFS 临时文件不被浏览器在存储压力下清除
- *
- * 可在应用启动时调用，不阻塞主流程。
- */
+/** 申请持久化存储等浏览器权限，不阻塞主流程 */
 export async function requestRequiredPermissions(): Promise<void> {
     // 1. 持久化存储（OPFS/IndexedDB 数据不被自动清除）
     if (typeof navigator !== 'undefined' && 'storage' in navigator && 'persist' in navigator.storage) {
@@ -69,9 +49,9 @@ export async function requestRequiredPermissions(): Promise<void> {
             const isPersisted = await navigator.storage.persisted();
             if (!isPersisted) {
                 const granted = await navigator.storage.persist();
-                console.log(`[权限] 持久化存储: ${granted ? '✅ 已授予' : '❌ 被拒绝'}`);
+                console.info(`[权限] 持久化存储: ${granted ? '✅ 已授予' : '❌ 被拒绝'}`);
             } else {
-                console.log('[权限] 持久化存储: ✅ 已有权限');
+                console.info('[权限] 持久化存储: ✅ 已有权限');
             }
         } catch (e) {
             console.warn('[权限] 持久化存储申请失败:', e);
@@ -85,17 +65,13 @@ export async function requestRequiredPermissions(): Promise<void> {
             const permNames = ['persistent-storage' as PermissionName];
             for (const name of permNames) {
                 const status = await navigator.permissions.query({ name });
-                console.log(`[权限] ${name}: ${status.state}`);
+                console.debug(`[权限] ${name}: ${status.state}`);
             }
         } catch { /* 浏览器不支持查询 */ }
     }
 }
 
-// ── 浏览器检测 ─────────────────────────────────────────────
-
 const isFirefox = typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
-
-// ── 测试支持 ───────────────────────────────────────────────
 
 let forceFallback = false;
 export function setForceFallback(v: boolean): void { forceFallback = v; }
@@ -105,24 +81,20 @@ export function isFileSystemAccessSupported(): boolean {
     return typeof window !== 'undefined' && 'showSaveFilePicker' in window;
 }
 
-// ── 各路径的 FileSaver 工厂 ─────────────────────────────
-
-/** 路径 1: File System Access API */
+/** FSAA: File System Access API */
 async function createFSAASaver(suggestedName: string): Promise<FileSaver> {
     const handle = await (window as any).showSaveFilePicker({ suggestedName });
     const writable = await handle.createWritable();
     return {
         write: async (data: ArrayBuffer | Uint8Array) => {
-            const buf = data instanceof ArrayBuffer
-                ? data
-                : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-            await writable.write(buf);
+            // writable.write() 直接接受 BufferSource，无需拷贝
+            await writable.write(data);
         },
         close: async () => { await writable.close(); },
     };
 }
 
-/** 路径 2: showDirectoryPicker + OPFS（Chrome Android） */
+/** showDirectoryPicker + OPFS（Chrome Android） */
 async function createDirectorySaver(suggestedName: string): Promise<FileSaver | null> {
     try {
         const dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
@@ -146,7 +118,7 @@ async function createDirectorySaver(suggestedName: string): Promise<FileSaver | 
     }
 }
 
-/** 路径 3: ServiceWorker 流式下载 */
+/** ServiceWorker 流式下载 */
 async function createSWSaver(suggestedName: string): Promise<FileSaver | null> {
     if (!isSWReady()) return null;
 
@@ -202,7 +174,7 @@ async function createSWSaver(suggestedName: string): Promise<FileSaver | null> {
     };
 }
 
-/** 路径 4: OPFS 中间存储 + Blob URL */
+/** OPFS 中间存储 + Blob URL */
 async function createOPFSSaver(suggestedName: string): Promise<FileSaver> {
     const root = await navigator.storage.getDirectory();
     const tmpName = `_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -227,12 +199,16 @@ async function createOPFSSaver(suggestedName: string): Promise<FileSaver> {
     };
 }
 
-/** 将 ArrayBuffer / Uint8Array 转为 Uint8Array<ArrayBuffer>，消除 SharedArrayBuffer 兼容问题 */
+/** 确保返回普通 ArrayBuffer 支撑的 Uint8Array，消除 SharedArrayBuffer 兼容问题 */
 function normalizeChunk(data: ArrayBuffer | Uint8Array): Uint8Array<ArrayBuffer> {
-    return data instanceof Uint8Array ? new Uint8Array(data) : new Uint8Array(data);
+    const raw = data instanceof Uint8Array ? data : new Uint8Array(data);
+    if (raw.buffer instanceof SharedArrayBuffer) {
+        return new Uint8Array(raw) as Uint8Array<ArrayBuffer>;
+    }
+    return raw as Uint8Array<ArrayBuffer>;
 }
 
-/** 路径 5: 纯内存 Blob（最终回退） */
+/** 纯内存 Blob（最终回退） */
 function createMemorySaver(suggestedName: string): FileSaver {
     const chunks: BlobPart[] = [];
     let closed = false;
@@ -272,13 +248,7 @@ function triggerDownload(blobOrFile: Blob | File, filename: string, onDone?: () 
     }, 10000);
 }
 
-// ── 对外主入口 ────────────────────────────────────────────
-
-/**
- * 根据浏览器能力自动选择最优方案创建 FileSaver
- *
- * 优先级：FSAA → showDirectoryPicker → OPFS → SW 流式 → 内存 Blob
- */
+/** 根据浏览器能力自动选择最优方案创建 FileSaver */
 export async function createFileSaver(suggestedName: string): Promise<FileSaver> {
     // 1. File System Access API（桌面端 + 部分移动端 Chrome）
     if (isFileSystemAccessSupported()) {

@@ -11,13 +11,15 @@ export type EventMap = {
 export type EventName = keyof EventMap;
 
 export class EventBus {
-    private listeners = new Map<string, Set<(...args: any[]) => void>>();
+    private listeners = new Map<EventName, Set<(...args: any[]) => void>>();
 
     on<K extends EventName>(event: K, callback: (...args: EventMap[K]) => void): void {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, new Set());
+        const set = this.listeners.get(event);
+        if (set) {
+            set.add(callback);
+        } else {
+            this.listeners.set(event, new Set([callback]));
         }
-        this.listeners.get(event)!.add(callback);
     }
 
     emit<K extends EventName>(event: K, ...args: EventMap[K]): void {

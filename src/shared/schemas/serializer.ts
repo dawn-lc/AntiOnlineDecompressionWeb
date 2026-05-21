@@ -6,10 +6,11 @@ import {
 } from '../constants';
 
 export class HeaderSerializer {
-    /** 序列化 AODK 固定前段 140 字节 + 可变文件名段 */
+    /** 序列化 AODK 固定前段 140 字节 + 可变文件名段 + Attachment */
     static serializeAODK(header: AODKHeader): ArrayBuffer {
         const filenameBytes = new TextEncoder().encode(header.filename);
-        const totalSize = AODK_HEADER_SIZE + filenameBytes.length;
+        const attachmentBytes = header.attachment ?? new Uint8Array(0);
+        const totalSize = AODK_HEADER_SIZE + filenameBytes.length + attachmentBytes.length;
         const buffer = new ArrayBuffer(totalSize);
         const view = new DataView(buffer);
         let offset = 0;
@@ -52,6 +53,12 @@ export class HeaderSerializer {
 
         // filename – UTF-8 bytes
         new Uint8Array(buffer, offset).set(filenameBytes);
+        offset += filenameBytes.length;
+
+        // attachment – 可变（不计入 HeaderSize）
+        if (attachmentBytes.length > 0) {
+            new Uint8Array(buffer, offset).set(attachmentBytes);
+        }
 
         return buffer;
     }
@@ -90,10 +97,18 @@ export class HeaderSerializer {
 
         const filenameBytes = new Uint8Array(buffer, offset, filenameLength);
         const filename = new TextDecoder().decode(filenameBytes);
+        offset += filenameLength;
+
+        // attachment – 剩余字节为附件（不计入 HeaderSize）
+        let attachment: Uint8Array | undefined;
+        if (offset < buffer.byteLength) {
+            attachment = new Uint8Array(buffer, offset, buffer.byteLength - offset);
+        }
 
         return {
             magic, version, headerSize, key, nonce, uuid,
             fileHash, originalFileSize, filenameLength, filename,
+            attachment,
         };
     }
 
@@ -107,9 +122,10 @@ export class HeaderSerializer {
         offset += 4;
         view.setUint16(offset, AODF_VERSION, true);
         offset += 2;
+        view.setUint32(offset, AODF_HEADER_SIZE, true);
+        offset += 4;
         new Uint8Array(buffer, offset, 32).set(header.uuid);
         offset += 32;
-        view.setUint32(offset, AODF_HEADER_SIZE, true);
 
         return buffer;
     }
@@ -122,19 +138,17 @@ export class HeaderSerializer {
         offset += 4;
         const version = view.getUint16(offset, true);
         offset += 2;
+        const headerSize = view.getUint32(offset, true);
+        offset += 4;
         const uuid = new Uint8Array(buffer, offset, 32);
         offset += 32;
-        const headerSize = view.getUint32(offset, true);
-        return { magic, version, uuid, headerSize };
+        return { magic, version, headerSize, uuid };
     }
 
     /** 验证 AODK Magic */
     static validateAODKMagic(magic: Uint8Array): boolean {
-        return magic.length === 4 &&
-            magic[0] === AODK_MAGIC[0] &&
-            magic[1] === AODK_MAGIC[1] &&
-            magic[2] === AODK_MAGIC[2] &&
-            magic[3] === AODK_MAGIC[3];
+        return magic.length === AODK_MAGIC.length &&
+            magic.every((b, i) => b === AODK_MAGIC[i]);
     }
 
 }
