@@ -1,0 +1,19 @@
+{
+    "name": "aodweb",
+    "version": "1.0.0",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "build": "node build.mjs"
+    },
+    "dependencies": {
+        "libsodium-wrappers": "^0.7.15"
+    },
+    "devDependencies": {
+        "@types/libsodium-wrappers": "^0.7.14",
+        "esbuild": "^0.25.0",
+        "esbuild-plugin-wasm": "^1.1.0",
+        "puppeteer": "^25.0.4",
+        "typescript": "^5.8.0"
+    }
+}

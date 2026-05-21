@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AODWEB - AntiOnline Decompression</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="header">
+        <h1>🔐 反在线解压</h1>
+        <p class="subtitle">文件加密混淆工具</p>
+    </div>
+
+    <div class="main-content">
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="tabBar">
+            <button class="tab" data-tab="encrypt">🔒 加密</button>
+            <button class="tab" data-tab="decrypt">🔓 解密</button>
+        </div>
+
+        <!-- Encrypt Panel -->
+        <div class="panel" id="encrypt">
+            <div class="file-drop" id="encryptDrop">
+                <div class="file-drop-icon">📄</div>
+                <div class="file-drop-text">
+                    拖拽文件到此处，或 <strong>点击选择文件</strong><br />
+                    <span style="font-size: 12px; opacity: 0.7">支持任意文件类型，不限大小</span>
+                </div>
+            </div>
+            <div class="file-info" id="encryptFileInfo">
+                <span class="name" id="encryptFileName"></span>
+                <span class="size" id="encryptFileSize"></span>
+                <button class="clear-btn" id="encryptClearBtn">✕</button>
+            </div>
+            <button class="btn btn-primary" id="encryptBtn" disabled>
+                🔒 加密文件
+            </button>
+        </div>
+
+        <!-- Decrypt Panel -->
+        <div class="panel" id="decrypt">
+            <div class="decrypt-files">
+                <div class="decrypt-file-row" id="decryptAodkRow">
+                    <div class="label">① 选择密钥文件</div>
+                    <div class="filename empty" id="decryptAodkName">
+                        点击选择密钥文件
+                    </div>
+                </div>
+                <div class="decrypt-file-row" id="decryptAodfRow">
+                    <div class="label">② 选择加密文件</div>
+                    <div class="filename empty" id="decryptAodfName">
+                        点击选择加密文件
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="decryptBtn" disabled>
+                🔓 解密文件
+            </button>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            <div class="progress-text" id="progressText"></div>
+        </div>
+    </div>
+
+    <script type="module" src="bundle.js"></script>
+</body>
+
+</html>

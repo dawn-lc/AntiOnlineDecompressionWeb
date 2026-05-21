@@ -1,0 +1,345 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #242436;
+    --border: #2e2e44;
+    --text: #e0e0ee;
+    --text2: #9d9db5;
+    --accent: #6c5ce7;
+    --accent-hover: #7f71f5;
+    --accent-dim: rgba(108, 92, 231, 0.15);
+    --danger: #e74c3c;
+    --success: #2ecc71;
+    --radius: 10px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: clamp(16px, 3vw, 32px);
+}
+
+.header {
+    max-width: 800px;
+    margin: 0 auto;
+    padding-bottom: clamp(12px, 2vw, 20px);
+}
+
+h1 {
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+h1 small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text2);
+}
+
+.subtitle {
+    color: var(--text2);
+    font-size: clamp(12px, 1.8vw, 14px);
+    margin-top: 2px;
+}
+
+.main-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Tab 激活状态由 URL hash 通过 :has() + :target 控制 */
+/* 默认 (无 hash 或 #encrypt)：加密 tab 激活 */
+.main-content [data-tab="encrypt"] {
+    color: var(--accent);
+    background: var(--accent-dim);
+    font-weight: 600;
+}
+
+.main-content [data-tab="encrypt"]:hover {
+    color: var(--accent-hover);
+}
+
+/* 当 #decrypt 时：解密 tab 激活，加密 tab 恢复非激活 */
+.main-content:has(#decrypt:target) [data-tab="decrypt"] {
+    color: var(--accent);
+    background: var(--accent-dim);
+    font-weight: 600;
+}
+
+.main-content:has(#decrypt:target) [data-tab="decrypt"]:hover {
+    color: var(--accent-hover);
+}
+
+.main-content:has(#decrypt:target) [data-tab="encrypt"] {
+    color: var(--text2);
+    background: transparent;
+    font-weight: 500;
+}
+
+/* 非激活 tab 的 hover */
+.main-content:has(#decrypt:target) [data-tab="encrypt"]:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.panel {
+    display: none;
+}
+
+/* 面板显示由 URL hash 控制 (:target)，无需 JS 介入即可避免闪烁 */
+#encrypt {
+    display: block;
+}
+
+:root:has(#decrypt:target) #encrypt {
+    display: none;
+}
+
+#decrypt:target {
+    display: block;
+}
+
+.file-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+    margin-bottom: 12px;
+}
+
+.file-drop:hover,
+.file-drop.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+
+.file-drop-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+    opacity: 0.5;
+}
+
+.file-drop-text {
+    color: var(--text2);
+    font-size: 13px;
+}
+
+.file-drop-text strong {
+    color: var(--accent);
+}
+
+.file-info {
+    display: none;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+}
+
+.file-info.visible {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-info .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-info .size {
+    color: var(--text2);
+}
+
+.file-info .clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.file-info .clear-btn:hover {
+    color: var(--danger);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
+}
+
+.progress-section {
+    display: none;
+    margin-top: 16px;
+}
+
+.progress-section.visible {
+    display: block;
+}
+
+.progress-bar-track {
+    width: 100%;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.15s ease;
+}
+
+.progress-text {
+    color: var(--text2);
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.decrypt-files {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.decrypt-file-row {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 82px;
+}
+
+.decrypt-file-row:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+
+.decrypt-file-row .label {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 4px;
+}
+
+.decrypt-file-row .filename {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.decrypt-file-row .filename.empty {
+    color: var(--text2);
+    opacity: 0.6;
+}
+
+.decrypt-file-row.has-file {
+    border-style: solid;
+    border-color: var(--accent);
+}
+
+@media (max-width: 480px) {
+    .card {
+        padding: 14px;
+    }
+
+    .file-drop {
+        padding: 16px 12px;
+    }
+
+    .decrypt-file-row {
+        padding: 10px 12px;
+    }
+}

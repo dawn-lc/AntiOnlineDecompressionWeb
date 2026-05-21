@@ -1,0 +1,16 @@
+/** 分块大小：256 KB */
+export const CHUNK_SIZE = 256 * 1024;
+
+/** AODK Magic Bytes */
+export const AODK_MAGIC = new Uint8Array([0x41, 0x4F, 0x44, 0x4B]);
+/** AODF Magic Bytes */
+export const AODF_MAGIC = new Uint8Array([0x41, 0x4F, 0x44, 0x46]);
+
+export const AODK_VERSION = 1;
+export const AODF_VERSION = 1;
+
+export const AODK_HEADER_SIZE = 140;
+export const AODF_HEADER_SIZE = 42;
+
+/** libsodium secretstream 每块额外开销（Poly1305 认证标签） */
+export const ABYTES = 17;
