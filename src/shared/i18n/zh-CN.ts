@@ -34,6 +34,8 @@ const zhCN: LocaleBundle = {
         'console.decryptStart': '开始解密文件: {name}',
         'console.decryptComplete': '解密完成！文件已保存为: {name}',
         'console.cancelled': '操作已取消',
+        'browser.hint': '推荐浏览器: Chrome / Edge ≥ 86',
+        'browser.current': '您当前的浏览器是 {browser}',
     },
 };
 

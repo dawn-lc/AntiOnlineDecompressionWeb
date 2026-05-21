@@ -6,7 +6,6 @@ export interface FileSaver {
 }
 
 let swReady = false;
-let popupAllowed = false;
 
 /** 注册 ServiceWorker（不阻塞主流程），用于流式下载回退 */
 export function initSWDownload(): void {
@@ -18,23 +17,6 @@ export function initSWDownload(): void {
             reg.addEventListener('activate', () => { swReady = true; });
         }
     }).catch(() => { });
-}
-
-/** 检测并请求弹窗权限，需在用户手势中调用（如首次点击按钮时） */
-export function requestPopupPermission(): void {
-    if (popupAllowed || isFirefox) return; // Firefox 弹窗拦截严格，跳过
-    try {
-        const win = window.open('', '_blank', 'width=1,height=1');
-        if (win) {
-            popupAllowed = true;
-            win.close();
-            console.info('[权限] 弹窗: ✅ 已允许');
-        } else {
-            console.warn('[权限] 弹窗: ❌ 被拦截，请允许此网站弹出窗口以使用流式下载');
-        }
-    } catch {
-        console.warn('[权限] 弹窗检测失败');
-    }
 }
 
 function isSWReady(): boolean {
@@ -71,7 +53,7 @@ export async function requestRequiredPermissions(): Promise<void> {
     }
 }
 
-const isFirefox = typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
+
 
 let forceFallback = false;
 export function setForceFallback(v: boolean): void { forceFallback = v; }
@@ -269,7 +251,7 @@ export async function createFileSaver(suggestedName: string): Promise<FileSaver>
     }
 
     // 4. ServiceWorker 流式下载（弹窗方案，同样保持低内存）
-    if (!isFirefox && popupAllowed && isSWReady()) {
+    if (isSWReady()) {
         try {
             const swSaver = await createSWSaver(suggestedName);
             if (swSaver) return swSaver;

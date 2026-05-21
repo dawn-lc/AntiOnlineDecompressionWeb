@@ -22,6 +22,8 @@ export interface LocaleMessages {
     'console.decryptStart': string;
     'console.decryptComplete': string;
     'console.cancelled': string;
+    'browser.hint': string;
+    'browser.current': string;
 }
 
 export type Locale = 'zh-CN' | 'en';

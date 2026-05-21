@@ -1,6 +1,5 @@
 import { EventBus } from '../shared/EventBus';
 import { formatBytes } from '../shared/formatBytes';
-import { requestPopupPermission } from './SaveHelper';
 import { t } from '../shared/i18n';
 
 /** 从 DOM 中取元素的简写 */
@@ -245,7 +244,6 @@ export class UI {
 
     onEncryptClick(callback: (file: File) => void): void {
         this.el.encryptBtn.addEventListener('click', () => {
-            requestPopupPermission();
             if (this.isBusy) { this.eventBus.emit('cancel'); return; }
             if (this.selectedFile) callback(this.selectedFile);
             else console.error(t('error.selectFile'));
@@ -254,7 +252,6 @@ export class UI {
 
     onDecryptClick(callback: (aodkFile: File, aodfFile: File) => void): void {
         this.el.decryptBtn.addEventListener('click', () => {
-            requestPopupPermission();
             if (this.isBusy) { this.eventBus.emit('cancel'); return; }
             if (this.selectedAodk && this.selectedAodf) callback(this.selectedAodk, this.selectedAodf);
             else console.error(t('error.selectBoth'));

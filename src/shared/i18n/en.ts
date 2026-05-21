@@ -34,6 +34,8 @@ const en: LocaleBundle = {
         'console.decryptStart': 'Decrypting file: {name}',
         'console.decryptComplete': 'Decryption complete! File saved as: {name}',
         'console.cancelled': 'Operation cancelled',
+        'browser.hint': 'Recommended: Chrome / Edge ≥ 86',
+        'browser.current': 'Your current browser is {browser}',
     },
 };
 
