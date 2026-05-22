@@ -1,4 +1,4 @@
-export interface LocaleMessages {
+﻿export interface LocaleMessages {
     'app.title': string;
     'app.subtitle': string;
     'tab.encrypt': string;
@@ -22,14 +22,11 @@ export interface LocaleMessages {
     'console.decryptStart': string;
     'console.decryptComplete': string;
     'console.cancelled': string;
-    'browser.hint': string;
-    'browser.current': string;
+    'alert.encryptComplete': string;
+    'alert.decryptComplete': string;
+    'alert.ok': string;
+    'browser.unsupportedTitle': string;
+    'browser.unsupportedDesc': string;
 }
 
 export type Locale = 'zh-CN' | 'en';
-
-export interface LocaleBundle {
-    locale: Locale;
-    label: string;
-    messages: LocaleMessages;
-}

@@ -1,6 +1,9 @@
 /node_modules
 /temp
 /dist
+tmp-test-*
+cert*.pem
+scripts/
 
 # 测试数据与输出（不跟踪大二进制文件）
 /test/fixtures/

@@ -1,5 +1,5 @@
-/** 分块大小：256 KB */
-export const CHUNK_SIZE = 256 * 1024;
+/** 分块大小：2 MB */
+export const CHUNK_SIZE = 2 * 1024 * 1024;
 
 /** AODK Magic Bytes */
 export const AODK_MAGIC = new Uint8Array([0x41, 0x4F, 0x44, 0x4B]);

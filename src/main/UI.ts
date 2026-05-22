@@ -1,6 +1,7 @@
 import { EventBus } from '../shared/EventBus';
 import { formatBytes } from '../shared/formatBytes';
 import { t } from '../shared/i18n';
+import { showAlertOverlay } from './Overlays';
 
 /** 从 DOM 中取元素的简写 */
 const getById = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -148,13 +149,22 @@ export class UI {
     }
 
     private bindEvents(): void {
-        this.eventBus.on('error', (message: string) => console.error('[错误]', message));
+        this.eventBus.on('error', (message: string) => {
+            console.error('[UI]', message);
+            showAlertOverlay(message, '❌');
+        });
         this.eventBus.on('progressUpdate', (bytes: number, total: number) => this.updateProgress(bytes, total));
         this.eventBus.on('complete', () => this.onComplete());
         this.eventBus.on('start', () => this.onStart());
         this.eventBus.on('cancel', () => this.onCancel());
+        this.eventBus.on('showAlert', (message: string) => showAlertOverlay(message, '✅'));
         this.eventBus.on('statusChange', (state: string) => {
             if (state === 'idle') {
+                this.isBusy = false;
+                this.restoreButtons();
+                this.el.progressSection.classList.remove('visible');
+                this.el.progressBar.style.width = '0%';
+                this.el.progressText.textContent = '';
                 this.resetEncryptState();
                 this.resetDecryptState();
             }
@@ -257,5 +267,6 @@ export class UI {
             else console.error(t('error.selectBoth'));
         });
     }
+
 
 }

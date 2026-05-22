@@ -1,7 +1,7 @@
 /**
  * 生成测试用的大文件
  *
- * 用法： node test/generate-fixture.mjs [size_in_MB]
+ * 用法： node test/generateFixture.mjs [size_in_MB]
  * 默认生成 512MB
  */
 

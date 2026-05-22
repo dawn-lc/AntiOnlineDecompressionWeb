@@ -39,7 +39,7 @@ export function computeFileHash(file: File): Promise<Uint8Array> {
                     offset = end;
                     hashWorker.postMessage(
                         { type: 'COMPUTE_HASH', chunk, isLast: false },
-                        chunk.buffer.byteLength > 0 ? { transfer: [chunk.buffer] } as any : {}
+                        chunk.buffer.byteLength > 0 ? { transfer: [chunk.buffer] } satisfies StructuredSerializeOptions : {}
                     );
                 }
             }

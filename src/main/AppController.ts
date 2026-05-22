@@ -1,10 +1,10 @@
 import { EventBus } from '../shared/EventBus';
-import { FileIOManager } from './FileIOManager';
+import { FileIOManager, createFileSaver, createFileSaverPair, FSAAUnsupportedError } from './FileIOManager';
+import type { FileSaver } from './FileIOManager';
+import { showFSAAUnsupportedOverlay } from './Overlays';
 import { HeaderSerializer } from '../shared/schemas/serializer';
 import type { MainThreadMessage } from '../shared/MessageTypes';
 import { AODF_HEADER_SIZE, CHUNK_SIZE, ABYTES } from '../shared/constants';
-import { createFileSaver } from './SaveHelper';
-import type { FileSaver } from './SaveHelper';
 import { formatBytes } from '../shared/formatBytes';
 import { computeFileHash } from '../shared/computeFileHash';
 import { compareUUID } from '../shared/compareUUID';
@@ -47,7 +47,7 @@ export class AppController {
                     break;
                 }
                 case 'HASH_RESULT': {
-                    console.debug(`[Hash] 文件哈希计算完成: ${Array.from(msg.hash).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16)}...`);
+                    console.debug(`[AppController] 文件哈希计算完成: ${Array.from(msg.hash).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16)}...`);
                     break;
                 }
                 case 'DECRYPT_READY': {
@@ -66,6 +66,7 @@ export class AppController {
 
         this.worker.onerror = (err) => {
             const msg = `Worker 错误: ${err.message}`;
+            console.error(`[AppController] Worker 错误: ${err.message}`);
             this.eventBus.emit('error', msg);
             this.rejectWorkerError?.(new Error(msg));
         };
@@ -76,8 +77,25 @@ export class AppController {
         this.eventBus.emit('start');
         console.info(t('console.encryptStart', { name: file.name, size: formatBytes(file.size) }));
 
-        let aodkSaver = await createFileSaver(`${file.name}.aodk`);
-        let aodfSaver = await createFileSaver(`${file.name}.aodf`);
+        let aodkSaver: FileSaver;
+        let aodfSaver: FileSaver;
+        try {
+            [aodkSaver, aodfSaver] = await createFileSaverPair(
+                `${file.name}.aodk`,
+                `${file.name}.aodf`,
+            );
+        } catch (err: any) {
+            if (err.name === 'FSAAUnsupportedError') {
+                showFSAAUnsupportedOverlay();
+                return;
+            }
+            if (err.name === 'AbortError') {
+                console.warn(t('console.cancelled'));
+                this.eventBus.emit('cancel');
+                return;
+            }
+            throw err;
+        }
 
         this.abortController = new AbortController();
         const signal = this.abortController.signal;
@@ -96,7 +114,7 @@ export class AppController {
             });
             await aodfSaver.write(aodfHeaderBuf.slice(0) as ArrayBuffer);
 
-            console.info(`[AppController] 开始流式加密, 文件大小: ${file.size}bytes`);
+            console.debug(`[AppController] 开始流式加密, 文件大小: ${file.size}bytes`);
             this.eventBus.emit('progressUpdate', 0, file.size);
             let encryptBytesDone = 0;
             let lastProgressTime = 0;
@@ -122,7 +140,6 @@ export class AppController {
             }
 
             await aodfSaver.close();
-            aodfSaver = null as any;
             this.eventBus.emit('progressUpdate', file.size, file.size);
 
             // 计算文件哈希
@@ -147,20 +164,21 @@ export class AppController {
             const aodkBuf = aodkBuffer.slice(0) as ArrayBuffer;
             await aodkSaver.write(aodkBuf);
             await aodkSaver.close();
-            aodkSaver = null as any;
 
             this.cleanupWorker();
-            console.info(`[加密] 密钥文件已保存: ${file.name}.aodk`);
+            console.info(`[AppController] 密钥文件已保存: ${file.name}.aodk`);
             console.info(t('console.encryptComplete'));
             this.eventBus.emit('complete');
+            this.eventBus.emit('showAlert', t('alert.encryptComplete'));
             this.eventBus.emit('statusChange', 'done');
         } catch (err: any) {
-            try { aodfSaver?.close(); } catch { }
-            try { aodkSaver?.close(); } catch { }
+            try { await aodfSaver.close(); } catch { /* 忽略 */ }
+            try { await aodkSaver.close(); } catch { /* 忽略 */ }
             if (err.name === 'AbortError') {
                 console.warn(t('console.cancelled'));
             } else {
                 const msg = err instanceof Error ? err.message : String(err);
+                console.error(`[AppController] 加密失败: ${msg}`);
                 this.eventBus.emit('error', `加密失败: ${msg}`);
             }
             this.cleanupWorker();
@@ -183,8 +201,8 @@ export class AppController {
             const streamHeader = aodkHeader.nonce;
             const originalFilename = aodkHeader.filename;
 
-            console.info(`[Decrypt] 原始文件名: ${originalFilename}`);
-            console.info(`[Decrypt] 原始文件大小: ${formatBytes(Number(aodkHeader.originalFileSize))}`);
+            console.info(`[AppController] 原始文件名: ${originalFilename}`);
+            console.info(`[AppController] 原始文件大小: ${formatBytes(Number(aodkHeader.originalFileSize))}`);
 
             // 使用原始文件名作为保存文件名（后缀名自动保留）
             const suggestedName = originalFilename || 'decrypted_output';
@@ -203,7 +221,7 @@ export class AppController {
             if (!compareUUID(aodkUUID, aodfUUID)) {
                 throw new Error('AODK 文件与 AODF 文件的 UUID 不匹配，无法解密');
             }
-            console.info('[Decrypt] UUID 验证通过');
+            console.info('[AppController] UUID 验证通过');
 
             // 5. 发送 INIT_DECRYPT 到 Worker 并等待 DECRYPT_READY
             console.debug(`[AppController] 发送 INIT_DECRYPT: key=${key.length}bytes, streamHeader=${streamHeader.length}bytes`);
@@ -211,7 +229,7 @@ export class AppController {
 
             // 6. 使用 ReadableStream 流式解密（跳过 AODF Header）
             const bodyOffset = AODF_HEADER_SIZE;
-            console.info(`[AppController] 读取加密体, offset=${bodyOffset}, 文件总大小=${aodfFile.size}`);
+            console.debug(`[AppController] 读取加密体, offset=${bodyOffset}, 文件总大小=${aodfFile.size}`);
             this.eventBus.emit('progressUpdate', 0, aodfFile.size - bodyOffset);
 
             const totalBodySize = aodfFile.size - bodyOffset;
@@ -333,20 +351,26 @@ export class AppController {
             try { reader.releaseLock(); } catch { /* ignore */ }
 
             await outputSaver.close();
-            outputSaver = null as any;
+            outputSaver = null;
 
             this.eventBus.emit('progressUpdate', totalBodySize, totalBodySize);
 
             this.cleanupWorker();
-            this.eventBus.emit('complete');
             console.info(t('console.decryptComplete', { name: originalFilename }));
+            this.eventBus.emit('complete');
+            this.eventBus.emit('showAlert', t('alert.decryptComplete'));
             this.eventBus.emit('statusChange', 'done');
         } catch (err: any) {
-            try { outputSaver?.close(); } catch { }
+            try { outputSaver?.close(); } catch { /* 忽略 */ }
+            if (err.name === 'FSAAUnsupportedError') {
+                showFSAAUnsupportedOverlay();
+                return;
+            }
             if (err.name === 'AbortError' || err.name === 'SecurityError') {
                 console.warn(t('console.cancelled'));
             } else {
                 const msg = err instanceof Error ? err.message : String(err);
+                console.error(`[AppController] 解密失败: ${msg}`);
                 this.eventBus.emit('error', `解密失败: ${msg}`);
             }
             this.cleanupWorker();

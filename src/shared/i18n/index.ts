@@ -1,42 +1,48 @@
-import type { Locale, LocaleMessages, LocaleBundle } from './types';
+import i18next from 'i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 import zhCN from './zh-CN';
 import en from './en';
+import type { LocaleMessages, Locale } from './types';
 
-const bundles: Record<Locale, LocaleBundle> = { 'zh-CN': zhCN, 'en': en };
+const LOCALE_LABELS: Record<Locale, string> = {
+    'zh-CN': '简体中文',
+    'en': 'English',
+};
 
-let currentLocale: Locale = 'zh-CN';
-let currentMessages: LocaleMessages = zhCN.messages;
-
-function detectLocale(): Locale {
-    if (typeof navigator === 'undefined') return 'zh-CN';
-    const lang = navigator.language;
-    if (lang.startsWith('zh')) return 'zh-CN';
-    if (lang.startsWith('en')) return 'en';
-    return 'zh-CN';
-}
-
-currentLocale = detectLocale();
-currentMessages = bundles[currentLocale].messages;
+i18next.use(LanguageDetector).init({
+    resources: {
+        'zh-CN': { translation: zhCN },
+        'en': { translation: en },
+    },
+    fallbackLng: 'zh-CN',
+    interpolation: {
+        prefix: '{',
+        suffix: '}',
+    },
+    detection: {
+        order: ['navigator', 'localStorage'],
+        caches: ['localStorage'],
+    },
+});
 
 export function setLocale(locale: Locale, onChanged?: () => void): void {
-    if (!bundles[locale]) return;
-    currentLocale = locale;
-    currentMessages = bundles[locale].messages;
     document.documentElement.lang = locale;
-    onChanged?.();
+    i18next.changeLanguage(locale, onChanged);
 }
 
-export function getLocale(): Locale { return currentLocale; }
-export function getBundles(): LocaleBundle[] { return Object.values(bundles); }
+export function getLocale(): Locale {
+    return i18next.language as Locale;
+}
+
+export function getBundles(): { locale: Locale; label: string }[] {
+    return (Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([locale, label]) => ({
+        locale,
+        label,
+    }));
+}
 
 export function t(key: keyof LocaleMessages, params?: Record<string, string | number>): string {
-    let msg = currentMessages[key];
-    if (msg === undefined) return key;
-    if (params) {
-        for (const [k, v] of Object.entries(params)) {
-            msg = msg.replace(`{${k}}`, String(v));
-        }
-    }
+    const msg = i18next.t(key, params);
     return msg;
 }
 
@@ -45,13 +51,7 @@ export function applyI18nToDOM(): void {
     document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n') as keyof LocaleMessages;
         const translated = t(key);
-        if (el.childElementCount > 0) {
-            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-            const textNode = walker.firstChild();
-            if (textNode) textNode.textContent = translated;
-        } else {
-            el.textContent = translated;
-        }
+        el.innerHTML = translated;
     });
 }
 
@@ -61,7 +61,7 @@ export function renderLocaleSwitcher(containerId: string, onChanged?: () => void
     if (!container) return;
     getBundles().forEach(bundle => {
         const btn = document.createElement('button');
-        btn.className = `locale-btn${bundle.locale === currentLocale ? ' active' : ''}`;
+        btn.className = `locale-btn${bundle.locale === getLocale() ? ' active' : ''}`;
         btn.textContent = bundle.label;
         btn.addEventListener('click', () => {
             setLocale(bundle.locale, () => {

@@ -98,26 +98,6 @@ h1 small {
     font-weight: 600;
 }
 
-.browser-hint {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--text);
-    background: var(--surface2);
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.browser-detect {
-    padding-left: 8px;
-    border-left: 1px solid var(--border);
-    color: var(--accent);
-    font-weight: 500;
-}
-
 .main-content {
     max-width: 800px;
     margin: 0 auto;
@@ -393,6 +373,73 @@ h1 small {
     border-color: var(--accent);
 }
 
+/* ====== App 内置浏览器提示层 ====== */
+
+.builtin-overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+}
+
+.builtin-overlay-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px 24px;
+    max-width: 360px;
+    width: calc(100% - 32px);
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: builtinOverlayIn 0.3s ease;
+}
+
+@keyframes builtinOverlayIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.builtin-overlay-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.builtin-overlay-card h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.builtin-overlay-card p {
+    font-size: 16px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.builtin-overlay-close {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.builtin-overlay-close:hover {
+    background: var(--accent-hover);
+}
+
 @media (max-width: 480px) {
     .card {
         padding: 14px;
@@ -406,3 +453,5 @@ h1 small {
         padding: 10px 12px;
     }
 }
+
+

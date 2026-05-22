@@ -1,6 +1,6 @@
 # 🔐 反在线解压
 
-> 一款完全在浏览器端运行的文件加密混淆工具。将文件拆分为**密钥文件** 与**加密数据文件**，即使加密数据被上传到网盘，服务方也无法识别其原始内容。
+> 一款完全在浏览器端运行的文件加密混淆工具。将文件拆分为**密钥文件**与**加密数据文件**，即使加密数据被上传到网盘，服务方也无法识别其原始内容。
 
 ## ✨ 特性
 
@@ -8,10 +8,7 @@
 - **🔓 解密** — 同时选择 `密钥` + `加密数据` 文件，还原原始文件
 - **⚡ 浏览器原生** — 所有加解密在浏览器内完成，文件不上传到任何服务器
 - **🧩 流式处理** — 无论文件多大，内存占用保持极低，分块加解密
-- **🧵 Web Worker** — 加解密在独立线程进行，不阻塞 UI
-- **💾 多级保存策略** — 优先使用 File System Access API，自动回退到 OPFS / ServiceWorker 流式下载 / Blob 下载
-- **📱 移动端支持** — 兼容移动浏览器，自动选择最佳保存方式
-- **🔐 XChaCha20-Poly1305** — 使用 libsodium 的 `secretstream` 实现认证加密
+- **🌐 国际化** — 支持中/英文界面，实时切换
 
 ## 🧬 文件格式
 
@@ -29,17 +26,31 @@
 | OriginalFileSize | 8 B  | 原始文件大小                    |
 | FilenameLength   | 2 B  | 原始文件名 UTF-8 字节长度       |
 | Filename         | 可变 | 原始文件名（UTF-8）             |
-| Attachment       | 可变 | 附件(不计入HeaderSize)          |
+| Attachment       | 可变 | 附件（不计入 HeaderSize）       |
 
 ### AODF（加密数据文件）
 
-| 字段          | 大小 | 说明                                  |
-| ------------- | ---- | ------------------------------------- |
-| Magic         | 4 B  | `0x41 0x4F 0x44 0x46`（"AODF"）       |
-| Version       | 2 B  | 格式版本，当前为 `1`                  |
-| HeaderSize    | 4 B  | Header 总大小                         |
-| UUID          | 32 B | 与 AODK 匹配的唯一标识                |
-| EncryptedData | 可变 | XChaCha20 加密数据 (不计入HeaderSize) |
+| 字段          | 大小 | 说明                                    |
+| ------------- | ---- | --------------------------------------- |
+| Magic         | 4 B  | `0x41 0x4F 0x44 0x46`（"AODF"）         |
+| Version       | 2 B  | 格式版本，当前为 `1`                    |
+| HeaderSize    | 4 B  | Header 总大小                           |
+| UUID          | 32 B | 与 AODK 匹配的唯一标识                  |
+| EncryptedData | 可变 | XChaCha20 加密数据（不计入 HeaderSize） |
+
+## 🖥️ 浏览器支持
+
+保存文件依赖 **File System Access API**（`showSaveFilePicker`），仅以下浏览器支持：
+
+| 浏览器                         | 支持情况 |
+| ------------------------------ | -------- |
+| Chrome / Edge                  | ✅ ≥ 86  |
+| Opera                          | ✅ ≥ 72  |
+| Firefox                        | ❌       |
+| Safari                         | ❌       |
+| Android WebView / 微信 / QQ 等 | ❌       |
+
+不支持时会显示阻塞提示层，引导用户安装/切换到 Chrome 或 Edge。
 
 ## 🏗️ 项目结构
 
@@ -49,9 +60,13 @@
 │   ├── bundle.mjs             # 单 bundle 构建函数
 │   └── config.mjs             # 共享构建配置
 ├── test/                      # 测试
-│   ├── e2e.mjs                # 端到端测试
-│   ├── helpers.mjs            # 测试工具函数
-│   ├── generate-fixture.mjs   # 测试文件生成脚本
+│   ├── runTests.mjs           # 端到端测试主入口
+│   ├── testUtils.mjs          # 测试工具函数
+│   ├── crypto.test.mjs        # 加解密测试
+│   ├── fileIo.test.mjs        # 文件读写测试
+│   ├── ui.test.mjs            # UI 界面测试
+│   ├── crossBrowserRunner.mjs # 跨浏览器运行器
+│   ├── generateFixture.mjs   # 测试文件生成脚本
 │   ├── fixtures/              # 测试数据文件（gitignored）
 │   └── output/                # 测试输出（gitignored）
 ├── package.json
@@ -62,9 +77,8 @@
 │   ├── main/                  # 主线程代码
 │   │   ├── index.ts           # 入口：初始化各模块
 │   │   ├── AppController.ts   # 加解密流程编排
-│   │   ├── FileIOManager.ts   # 文件流式读取
-│   │   ├── KeyFileManager.ts  # AODK 文件解析
-│   │   ├── SaveHelper.ts      # 多级保存策略（FSAA / OPFS / SW / Blob）
+│   │   ├── FileIOManager.ts   # 文件 I/O（读取 + FSAA 保存）
+│   │   ├── Overlays.ts        # 提示层管理（阻塞层 + 操作完成提示）
 │   │   └── UI.ts              # 界面交互逻辑
 │   ├── worker/                # Web Worker 线程代码
 │   │   ├── CryptoWorker.ts    # Worker 消息调度
@@ -72,8 +86,6 @@
 │   │   ├── StreamDecryptor.ts # XChaCha20-Poly1305 流解密
 │   │   ├── HashCalculator.ts  # 通用哈希计算（BLAKE2b）
 │   │   └── WasmLoader.ts      # libsodium WASM 加载
-│   ├── sw/                    # ServiceWorker
-│   │   └── DownloadSW.ts      # 流式文件下载 SW
 │   └── shared/                # 共享代码
 │       ├── constants.ts       # 常量（分块大小、Magic 字节等）
 │       ├── EventBus.ts        # 轻量发布/订阅事件总线
@@ -81,9 +93,11 @@
 │       ├── compareUUID.ts     # UUID 比较工具
 │       ├── computeFileHash.ts # Worker 流式文件哈希计算
 │       ├── MessageTypes.ts    # Worker ↔ 主线程消息类型
-│       ├── i18n/              # 国际化
+│       ├── browserDetect.ts   # FSAA 可用性运行时探测
+│       ├── global.d.ts        # 全局类型声明
+│       ├── i18n/              # 国际化（i18next）
 │       │   ├── types.ts       # 翻译键类型定义
-│       │   ├── index.ts       # i18n
+│       │   ├── index.ts       # i18n 初始化与导出
 │       │   ├── zh-CN.ts       # 简体中文语言包
 │       │   └── en.ts          # English language pack
 │       └── schemas/
@@ -98,24 +112,39 @@
 # 安装依赖
 npm install
 
-# 构建
+# 开发构建（带 sourcemap）
+npm run build -- --dev
+
+# 生产构建
 npm run build
 
-# 构建产物在 dist/ 目录
+# 运行测试（Chromium）
+node test/runTests.mjs
+
+# 跨浏览器测试（Chromium + Firefox + WebKit）
+npm test
 ```
 
 构建完成后，使用任意静态服务器打开 `dist/index.html` 即可使用。
 
-### 开发
-
 ```bash
-# 带 sourcemap 的开发构建
-node build/index.mjs --dev
+# 使用 npx serve 预览
+npx serve dist -p 3456 --no-clipboard --cors
 ```
+
+## 🧪 测试
+
+| 环境变量          | 说明                                            |
+| ----------------- | ----------------------------------------------- |
+| `BROWSER=firefox` | 使用 Firefox 测试                               |
+| `BROWSER=webkit`  | 使用 Safari WebKit 测试                         |
+| `MOBILE=1`        | 模拟移动端（iPhone 12）                         |
+| `NO_FSAA=1`       | 不拦截 `showSaveFilePicker`，使用浏览器真实 API |
+| `NO_INJECT=1`     | 不注入任何 API 拦截                             |
 
 ## 🌐 国际化
 
-支持中英文界面，按浏览器语言自动选择。点击标题下方的语言按钮可实时切换。
+支持中英文界面，按浏览器语言自动选择。点击顶部的语言按钮可实时切换。
 
 | 语言     | 标识    | 文件                       |
 | -------- | ------- | -------------------------- |

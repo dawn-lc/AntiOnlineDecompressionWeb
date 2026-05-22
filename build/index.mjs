@@ -1,12 +1,11 @@
 /**
  * 构建入口
  *
- * 构建三个 bundle：
+ * 构建两个 bundle：
  *   1. dist/bundle.js  — 主线程
  *   2. dist/worker.js  — Web Worker（需要 wasm）
- *   3. dist/sw.js      — ServiceWorker
  *
- * 并将 public/ 下的静态文件复制到 dist/
+ * 复制 src/ 下的静态文件到 dist/。
  *
  * 用法：
  *   node build/index.mjs        # 生产构建（压缩）
@@ -29,9 +28,6 @@ await buildBundle('src/main/index.ts', 'bundle.js', devOpts);
 
 // Web Worker（需要 wasm）
 await buildBundle('src/worker/CryptoWorker.ts', 'worker.js', { ...devOpts, useWasm: true });
-
-// ServiceWorker（无 wasm）
-await buildBundle('src/sw/DownloadSW.ts', 'sw.js', devOpts);
 
 // 复制静态文件
 fs.copyFileSync(path.resolve(ROOT, 'src/index.html'), path.resolve(OUT_DIR, 'index.html'));

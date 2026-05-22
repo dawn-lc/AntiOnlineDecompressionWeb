@@ -6,6 +6,7 @@ export type EventMap = {
     error: [message: string];
     progressUpdate: [bytesProcessed: number, totalBytes: number];
     statusChange: [status: 'idle' | 'done'];
+    showAlert: [message: string];
 };
 
 export type EventName = keyof EventMap;
@@ -27,7 +28,7 @@ export class EventBus {
             try {
                 cb(...args);
             } catch (err) {
-                console.error(`EventBus error in ${event}:`, err);
+                console.error(`[EventBus] error in ${event}:`, err);
             }
         });
     }

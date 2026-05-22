@@ -5,17 +5,19 @@
     "private": true,
     "scripts": {
         "build": "node build/index.mjs",
-        "test": "node test/e2e.mjs",
-        "test:fixture": "node test/generate-fixture.mjs"
+        "test": "node test/crossBrowserRunner.mjs",
+        "test:fixture": "node test/generate_fixture.mjs"
     },
     "dependencies": {
+        "i18next": "^24.2.3",
+        "i18next-browser-languagedetector": "^8.0.4",
         "libsodium-wrappers": "^0.7.15"
     },
     "devDependencies": {
         "@types/libsodium-wrappers": "^0.7.14",
         "esbuild": "^0.25.0",
         "esbuild-plugin-wasm": "^1.1.0",
-        "puppeteer": "^25.0.4",
+        "playwright": "^1.52.0",
         "typescript": "^5.8.0"
     }
 }
