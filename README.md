@@ -45,7 +45,6 @@
 | 浏览器                         | 支持情况 |
 | ------------------------------ | -------- |
 | Chrome / Edge                  | ✅ ≥ 86  |
-| Opera                          | ✅ ≥ 72  |
 | Firefox                        | ❌       |
 | Safari                         | ❌       |
 | Android WebView / 微信 / QQ 等 | ❌       |
