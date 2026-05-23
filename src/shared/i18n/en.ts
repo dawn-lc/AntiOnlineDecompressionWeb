@@ -2,7 +2,7 @@
 
 const en: LocaleMessages = {
     'app.title': '🔐 Anti Online Decompression',
-    'app.subtitle': 'File Encryption & Obfuscation Tool',
+    'app.subtitle': 'Key-data separation — cloud storage can\'t scan your files',
 
     'tab.encrypt': '🔒 Encrypt',
     'tab.decrypt': '🔓 Decrypt',
@@ -32,12 +32,18 @@ const en: LocaleMessages = {
     'console.decryptComplete': 'Decryption complete! File saved as: {name}',
     'console.cancelled': 'Operation cancelled',
 
-    'alert.encryptComplete': 'Encryption complete!\nAODK key file and AODF encrypted file have been saved.',
-    'alert.decryptComplete': 'Decryption complete!\nFile has been saved.',
+    'alert.encryptComplete': 'Encryption complete',
+    'alert.decryptComplete': 'Decryption complete',
     'alert.ok': 'OK',
 
     'browser.unsupportedTitle': 'Browser Not Supported',
-    'browser.unsupportedDesc': 'Your browser does not support the file saving feature.\nPlease use Chrome or Edge (version ≥ 86) to access this page.',
+    'browser.unsupportedDesc': 'Your browser does not support the file saving feature.<br>Please use Chrome or Edge to access this page.',
+
+    'browser.unsupportedHttpsTitle': 'HTTPS Required',
+    'browser.unsupportedHttpsDesc': 'Due to browser security requirements, the file saving feature requires a secure connection (HTTPS).<br>Please access this page via HTTPS or localhost.',
+
+    'browser.openEdge': 'Open with Microsoft Edge',
+    'browser.openChrome': 'Open with Google Chrome',
 };
 
 export default en;

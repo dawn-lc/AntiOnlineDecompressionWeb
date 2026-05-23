@@ -34,6 +34,17 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 postToMain({ type: 'READY', header, key });
                 break;
             }
+            case 'ENCRYPT_UUID': {
+                if (!encryptor) {
+                    postToMain({ type: 'ERROR', message: '加密器未初始化' });
+                    break;
+                }
+                console.debug(`[Worker] ENCRYPT_UUID: ${msg.uuid.length}bytes`);
+                // UUID 作为 secretstream 的第一个消息（非最后一块）
+                const encrypted = encryptor.push(msg.uuid, false);
+                postToMain({ type: 'ENCRYPTED_UUID', data: encrypted });
+                break;
+            }
             case 'ENCRYPT_CHUNK': {
                 if (!encryptor) {
                     postToMain({ type: 'ERROR', message: '加密器未初始化' });
@@ -60,6 +71,21 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 decryptor = StreamDecryptor.create(sodium, msg.key, msg.header);
                 console.debug('[Worker] StreamDecryptor 创建完成');
                 postToMain({ type: 'DECRYPT_READY' });
+                break;
+            }
+            case 'DECRYPT_UUID': {
+                if (!decryptor) {
+                    postToMain({ type: 'ERROR', message: '解密器未初始化' });
+                    break;
+                }
+                console.debug(`[Worker] DECRYPT_UUID: ${msg.encryptedUuid.length}bytes`);
+                // 从 secretstream 拉取第一个消息（即加密的 UUID）
+                const result = decryptor.pull(msg.encryptedUuid);
+                if (!result || !result.message) {
+                    postToMain({ type: 'ERROR', message: '解密 UUID 失败' });
+                    break;
+                }
+                postToMain({ type: 'DECRYPTED_UUID', uuid: result.message });
                 break;
             }
             case 'DECRYPT_CHUNK': {

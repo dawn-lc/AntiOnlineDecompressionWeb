@@ -27,6 +27,10 @@
     'alert.ok': string;
     'browser.unsupportedTitle': string;
     'browser.unsupportedDesc': string;
+    'browser.unsupportedHttpsTitle': string;
+    'browser.unsupportedHttpsDesc': string;
+    'browser.openEdge': string;
+    'browser.openChrome': string;
 }
 
-export type Locale = 'zh-CN' | 'en';
+export type Locale = 'zh-CN' | 'en' | 'ja' | 'ko' | 'fr' | 'de';

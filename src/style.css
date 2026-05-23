@@ -69,35 +69,6 @@ h1 small {
     margin-top: 2px;
 }
 
-.locale-switcher {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-.locale-btn {
-    background: var(--surface2);
-    color: var(--text2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.locale-btn:hover {
-    border-color: var(--accent);
-    color: var(--text);
-}
-
-.locale-btn.active {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 600;
-}
-
 .main-content {
     max-width: 800px;
     margin: 0 auto;
@@ -393,7 +364,7 @@ h1 small {
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 32px 24px 24px;
-    max-width: 360px;
+    max-width: 400px;
     width: calc(100% - 32px);
     text-align: center;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -419,8 +390,12 @@ h1 small {
 .builtin-overlay-card p {
     font-size: 16px;
     color: var(--text2);
-    line-height: 1.6;
+    line-height: 1.7;
     margin-bottom: 16px;
+    /* 自动平衡换行，避免孤行和生硬截断（Chrome 117+） */
+    text-wrap: pretty;
+    word-break: auto-phrase;   /* 自然短语断行（Chrome 126+） */
+    overflow-wrap: break-word; /* 兜底防溢出 */
 }
 
 .builtin-overlay-close {

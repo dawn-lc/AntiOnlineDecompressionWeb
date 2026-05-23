@@ -95,18 +95,31 @@ export class FileIOManager {
         return await blob.arrayBuffer();
     }
 
+    /** 将 ReadableStream 包装为 AsyncGenerator，弥补 TS 类型对 ReadableStream async iterable 的支持缺口 */
+    private async *iterateStream(stream: ReadableStream<Uint8Array>): AsyncGenerator<Uint8Array> {
+        const reader = stream.getReader();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) return;
+                yield value;
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
     /** 将文件流式读入并分块发送到 Worker */
     async readAndProcess(file: File, onChunk: (chunk: Uint8Array, isLast: boolean) => void | Promise<void>, signal?: AbortSignal): Promise<void> {
-        const bufSize = CHUNK_SIZE * 2;
-        const buf = new Uint8Array(bufSize);
+        const buf = new Uint8Array(CHUNK_SIZE * 2);
         let pos = 0;
 
-        for await (const value of file.stream()) {
+        for await (const value of this.iterateStream(file.stream())) {
             if (signal?.aborted) return;
 
             let offset = 0;
             while (offset < value.length) {
-                const space = bufSize - pos;
+                const space = buf.length - pos;
                 const copyLen = Math.min(value.length - offset, space);
                 buf.set(value.subarray(offset, offset + copyLen), pos);
                 pos += copyLen;

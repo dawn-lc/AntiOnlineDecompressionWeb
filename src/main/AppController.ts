@@ -4,7 +4,7 @@ import type { FileSaver } from './FileIOManager';
 import { showFSAAUnsupportedOverlay } from './Overlays';
 import { HeaderSerializer } from '../shared/schemas/serializer';
 import type { MainThreadMessage } from '../shared/MessageTypes';
-import { AODF_HEADER_SIZE, CHUNK_SIZE, ABYTES } from '../shared/constants';
+import { AODF_VERSION, AODF_HEADER_SIZE, CHUNK_SIZE, ABYTES } from '../shared/constants';
 import { formatBytes } from '../shared/formatBytes';
 import { computeFileHash } from '../shared/computeFileHash';
 import { compareUUID } from '../shared/compareUUID';
@@ -18,6 +18,8 @@ export class AppController {
     private resolveWorkerReady: ((value: { header: Uint8Array; key: Uint8Array }) => void) | null = null;
     private resolveChunkProcessed: ((data: Uint8Array) => void) | null = null;
     private resolveDecryptReady: (() => void) | null = null;
+    private resolveEncryptedUuid: ((data: Uint8Array) => void) | null = null;
+    private resolveDecryptedUuid: ((uuid: Uint8Array) => void) | null = null;
     private rejectWorkerError: ((err: Error) => void) | null = null;
 
     constructor(
@@ -53,6 +55,16 @@ export class AppController {
                 case 'DECRYPT_READY': {
                     console.debug('[AppController] DECRYPT_READY 收到');
                     this.resolveDecryptReady?.();
+                    break;
+                }
+                case 'ENCRYPTED_UUID': {
+                    console.debug(`[AppController] ENCRYPTED_UUID 收到: ${msg.data.length}bytes`);
+                    this.resolveEncryptedUuid?.(msg.data);
+                    break;
+                }
+                case 'DECRYPTED_UUID': {
+                    console.debug(`[AppController] DECRYPTED_UUID 收到: ${msg.uuid.length}bytes`);
+                    this.resolveDecryptedUuid?.(msg.uuid);
                     break;
                 }
                 case 'ERROR': {
@@ -106,11 +118,15 @@ export class AppController {
             console.debug(`[AppController] 得到真实加密 key: ${key.length}bytes, streamHeader: ${streamHeader.length}bytes`);
 
             const uuid = crypto.getRandomValues(new Uint8Array(32));
+            // UUID 作为 secretstream 第一个消息加密，存入 AODF 头部
+            const encryptedUuid = await this.sendUuidToWorker(uuid);
+            console.debug(`[AppController] UUID 已加密: ${encryptedUuid.length}bytes`);
+
             const aodfHeaderBuf = HeaderSerializer.serializeAODF({
                 magic: new Uint8Array([0x41, 0x4F, 0x44, 0x46]),
-                version: 1,
+                version: AODF_VERSION,
                 headerSize: AODF_HEADER_SIZE,
-                uuid,
+                encryptedUuid,
             });
             await aodfSaver.write(aodfHeaderBuf.slice(0) as ArrayBuffer);
 
@@ -211,21 +227,21 @@ export class AppController {
             // 2. 初始化 Worker
             await this.initWorker();
 
-            // 3. 读取 AODF Header 验证 UUID
+            // 3. 发送 INIT_DECRYPT 到 Worker 并等待 DECRYPT_READY
+            console.debug(`[AppController] 发送 INIT_DECRYPT: key=${key.length}bytes, streamHeader=${streamHeader.length}bytes`);
+            await this.sendDecryptInit(key, streamHeader);
+
+            // 4. 读取 AODF Header 获取加密的 UUID
             const aodfHeaderBuf = await this.fileIO.readHeaderFromFile(aodfFile, AODF_HEADER_SIZE);
             const aodfHeader = HeaderSerializer.deserializeAODF(aodfHeaderBuf);
 
-            // 4. 验证 UUID 匹配
+            // 5. 解密 UUID 并验证匹配
             const aodkUUID = aodkHeader.uuid;
-            const aodfUUID = aodfHeader.uuid;
-            if (!compareUUID(aodkUUID, aodfUUID)) {
+            const decryptedUuid = await this.sendDecryptUuidToWorker(aodfHeader.encryptedUuid);
+            if (!compareUUID(aodkUUID, decryptedUuid)) {
                 throw new Error('AODK 文件与 AODF 文件的 UUID 不匹配，无法解密');
             }
             console.info('[AppController] UUID 验证通过');
-
-            // 5. 发送 INIT_DECRYPT 到 Worker 并等待 DECRYPT_READY
-            console.debug(`[AppController] 发送 INIT_DECRYPT: key=${key.length}bytes, streamHeader=${streamHeader.length}bytes`);
-            await this.sendDecryptInit(key, streamHeader);
 
             // 6. 使用 ReadableStream 流式解密（跳过 AODF Header）
             const bodyOffset = AODF_HEADER_SIZE;
@@ -411,6 +427,36 @@ export class AppController {
                 { type: 'ENCRYPT_CHUNK', chunk, isLast },
                 { transfer }
             );
+        });
+    }
+
+    /** 发送 UUID 到 Worker 加密并等待结果 */
+    private sendUuidToWorker(uuid: Uint8Array): Promise<Uint8Array> {
+        return new Promise((resolve, reject) => {
+            this.resolveEncryptedUuid = (data) => {
+                this.resolveEncryptedUuid = null;
+                resolve(data);
+            };
+            this.rejectWorkerError = (err) => {
+                this.rejectWorkerError = null;
+                reject(err);
+            };
+            this.worker?.postMessage({ type: 'ENCRYPT_UUID', uuid });
+        });
+    }
+
+    /** 发送加密的 UUID 到 Worker 解密并等待结果 */
+    private sendDecryptUuidToWorker(encryptedUuid: Uint8Array): Promise<Uint8Array> {
+        return new Promise((resolve, reject) => {
+            this.resolveDecryptedUuid = (uuid) => {
+                this.resolveDecryptedUuid = null;
+                resolve(uuid);
+            };
+            this.rejectWorkerError = (err) => {
+                this.rejectWorkerError = null;
+                reject(err);
+            };
+            this.worker?.postMessage({ type: 'DECRYPT_UUID', encryptedUuid });
         });
     }
 

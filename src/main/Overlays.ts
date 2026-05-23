@@ -27,33 +27,39 @@ function replaceWithInstallBtn(launchBtnId: string, label: string, installUrl: s
     }, delayMs);
 }
 
-/** 显示 "请使用 Chrome/Edge" 阻塞提示层 */
-export function showFSAAUnsupportedOverlay(): void {
+/** 显示 FSAA 不可用的阻塞提示层 */
+export function showFSAAUnsupportedOverlay(opts?: { insecureContext?: boolean }): void {
     const isAndroid = /Android/.test(navigator.userAgent);
     const isWindows = /Windows/.test(navigator.userAgent);
+
+    // 非安全上下文（HTTP）时提示 HTTPS，否则提示切换浏览器
+    const titleKey = opts?.insecureContext ? 'browser.unsupportedHttpsTitle' : 'browser.unsupportedTitle';
+    const descKey = opts?.insecureContext ? 'browser.unsupportedHttpsDesc' : 'browser.unsupportedDesc';
 
     const overlay = document.createElement('div');
     overlay.innerHTML = `
         <div class="builtin-overlay-backdrop"></div>
         <div class="builtin-overlay-card">
             <div class="builtin-overlay-icon">⚠️</div>
-            <h2>${t('browser.unsupportedTitle')}</h2>
-            <p>${t('browser.unsupportedDesc').replace(/\n/g, '<br>')}</p>
+            <h2>${t(titleKey)}</h2>
+            <p>${t(descKey)}</p>
+            ${opts?.insecureContext ? '' : `
             <div class="launch-buttons">
                 ${isAndroid ? `
-                    <button class="builtin-overlay-close" id="launchEdgeBtn">打开 Edge</button>
-                    <button class="builtin-overlay-close" id="launchChromeBtn" style="margin-top:8px;background:var(--accent-hover)">打开 Chrome</button>
+                    <button class="builtin-overlay-close" id="launchEdgeBtn">${t('browser.openEdge')}</button>
+                    <button class="builtin-overlay-close" id="launchChromeBtn" style="margin-top:8px;background:var(--accent-hover)">${t('browser.openChrome')}</button>
                 ` : isWindows ? `
-                    <button class="builtin-overlay-close" id="launchEdgeBtn">打开 Edge</button>
-                    <button class="builtin-overlay-close" id="launchChromeBtn" style="margin-top:8px;background:var(--accent-hover)">打开 Chrome</button>
-                ` : `<button class="builtin-overlay-close" id="launchBrowserBtn">打开 Chrome</button>`}
-            </div>
+                    <button class="builtin-overlay-close" id="launchEdgeBtn">${t('browser.openEdge')}</button>
+                ` : `<button class="builtin-overlay-close" id="launchBrowserBtn">${t('browser.openChrome')}</button>`}
+            </div>`}
         </div>
     `;
     document.body.appendChild(overlay);
 
     // 复制当前地址到剪贴板（辅助兜底）
     navigator.clipboard?.writeText(location.href).catch(() => { });
+
+    if (opts?.insecureContext) return; // HTTPS 提示不需要启动按钮
 
     if (isAndroid) {
         document.getElementById('launchChromeBtn')?.addEventListener('click', () => {
@@ -68,10 +74,6 @@ export function showFSAAUnsupportedOverlay(): void {
         document.getElementById('launchEdgeBtn')?.addEventListener('click', () => {
             location.href = `microsoft-edge:${location.href}`;
             replaceWithInstallBtn('launchEdgeBtn', 'Edge', 'https://www.microsoft.com/edge/download');
-        });
-        document.getElementById('launchChromeBtn')?.addEventListener('click', () => {
-            location.href = `googlechrome:${location.href}`;
-            replaceWithInstallBtn('launchChromeBtn', 'Chrome', chromeInstallUrl());
         });
     } else {
         // macOS → googlechrome: 协议

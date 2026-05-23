@@ -2,7 +2,7 @@
 
 const zhCN: LocaleMessages = {
     'app.title': '🔐 反在线解压',
-    'app.subtitle': '文件加密混淆工具',
+    'app.subtitle': '密钥与数据分离，网盘无法扫描你的文件',
 
     'tab.encrypt': '🔒 加密',
     'tab.decrypt': '🔓 解密',
@@ -32,12 +32,18 @@ const zhCN: LocaleMessages = {
     'console.decryptComplete': '解密完成！文件已保存为: {name}',
     'console.cancelled': '操作已取消',
 
-    'alert.encryptComplete': '加密完成！\nAODK 密钥文件和 AODF 加密文件已保存。',
-    'alert.decryptComplete': '解密完成！\n文件已保存。',
+    'alert.encryptComplete': '加密完成',
+    'alert.decryptComplete': '解密完成',
     'alert.ok': '确定',
 
     'browser.unsupportedTitle': '浏览器不支持',
-    'browser.unsupportedDesc': '当前浏览器不支持文件保存功能。\n请使用 Chrome 或 Edge 浏览器（版本 ≥ 86）访问此页面。',
+    'browser.unsupportedDesc': '当前浏览器不支持文件保存功能。<br>请使用 Chrome 或 Edge 访问此页面。',
+
+    'browser.unsupportedHttpsTitle': '需要 HTTPS',
+    'browser.unsupportedHttpsDesc': '受浏览器安全要求限制，文件保存功能需要安全连接 (HTTPS)。<br>请通过 HTTPS 或 localhost 访问此页面。',
+
+    'browser.openEdge': '使用 Microsoft Edge 打开',
+    'browser.openChrome': '使用 Google Chrome 打开',
 };
 
 export default zhCN;

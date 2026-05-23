@@ -1,5 +1,4 @@
-﻿import { applyI18nToDOM, renderLocaleSwitcher } from '../shared/i18n';
-import { isFSAAUnsupported } from '../shared/browserDetect';
+﻿import { isFSAAUnsupported, isInsecureContext } from '../shared/browserDetect';
 import { showFSAAUnsupportedOverlay } from './Overlays';
 import { EventBus } from '../shared/EventBus';
 import { FileIOManager } from './FileIOManager';
@@ -7,12 +6,9 @@ import { AppController } from './AppController';
 import { UI } from './UI';
 
 function main() {
-    applyI18nToDOM();
-    renderLocaleSwitcher('localeSwitcher');
-
     // 检查 FSAA API 是否存在
     if (isFSAAUnsupported()) {
-        showFSAAUnsupportedOverlay();
+        showFSAAUnsupportedOverlay({ insecureContext: isInsecureContext() });
         return;
     }
 

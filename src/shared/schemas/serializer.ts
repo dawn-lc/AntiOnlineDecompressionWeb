@@ -112,7 +112,7 @@ export class HeaderSerializer {
         };
     }
 
-    /** 序列化 AODF Header（固定 42 字节） */
+    /** 序列化 AODF Header（固定 59 字节） */
     static serializeAODF(header: AODFHeader): ArrayBuffer {
         const buffer = new ArrayBuffer(AODF_HEADER_SIZE);
         const view = new DataView(buffer);
@@ -124,8 +124,8 @@ export class HeaderSerializer {
         offset += 2;
         view.setUint32(offset, AODF_HEADER_SIZE, true);
         offset += 4;
-        new Uint8Array(buffer, offset, 32).set(header.uuid);
-        offset += 32;
+        new Uint8Array(buffer, offset, 49).set(header.encryptedUuid);
+        offset += 49;
 
         return buffer;
     }
@@ -140,9 +140,9 @@ export class HeaderSerializer {
         offset += 2;
         const headerSize = view.getUint32(offset, true);
         offset += 4;
-        const uuid = new Uint8Array(buffer, offset, 32);
-        offset += 32;
-        return { magic, version, headerSize, uuid };
+        const encryptedUuid = new Uint8Array(buffer, offset, 49);
+        offset += 49;
+        return { magic, version, headerSize, encryptedUuid };
     }
 
     /** 验证 AODK Magic */

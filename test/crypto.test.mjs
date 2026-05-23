@@ -11,8 +11,8 @@
 import fs from 'fs';
 import { sleep, sha256, dismissAlertOverlay } from './testUtils.mjs';
 
-/** AODF 固定头部大小 */
-const AODF_HEADER_SIZE = 42;
+/** AODF 固定头部大小（magic4 + version2 + headerSize4 + encryptedUuid49） */
+const AODF_HEADER_SIZE = 59;
 
 /**
  * 在浏览器中拦截 showSaveFilePicker，将输出捕获到 `window.__testFiles`
@@ -216,10 +216,11 @@ async function validateAodfHeaderInBrowser(page, aodfName) {
         );
         const version = view.getUint16(4, true);
         const hdrSize = view.getUint32(6, true);
-        const uuid = new Uint8Array(buf, 10, 32);
-        const uuidHex = Array.from(uuid).map(b => b.toString(16).padStart(2, '0')).join('');
+        // UUID 已加密（49 bytes），不可与 AODK 直接比对明文
+        const encryptedUuid = new Uint8Array(buf, 10, 49);
+        const encryptedUuidHex = Array.from(encryptedUuid).map(b => b.toString(16).padStart(2, '0')).join('');
 
-        return { magic, version, headerSize: hdrSize, uuidHex, blobSize: blob.size };
+        return { magic, version, headerSize: hdrSize, encryptedUuidHex, blobSize: blob.size };
     }, aodfName);
 }
 
@@ -282,13 +283,10 @@ export async function testEncrypt(page, testFilePath) {
     console.log(`   文件大小: ${(aodfInfo.blobSize / 1024 / 1024).toFixed(2)} MB`);
 
     if (aodfInfo.magic !== 'AODF') throw new Error(`AODF Magic 不匹配: ${aodfInfo.magic}`);
-    if (aodfInfo.version !== 1) throw new Error(`AODF Version 不匹配: ${aodfInfo.version}`);
+    if (aodfInfo.version !== 2) throw new Error(`AODF Version 不匹配: ${aodfInfo.version}`);
 
-    // ─── 校验 UUID 一致性 ───
-    if (aodkInfo.uuidHex !== aodfInfo.uuidHex) {
-        throw new Error('AODK 与 AODF UUID 不匹配');
-    }
-    console.log('   ✅ UUID 一致');
+    // UUID 已被加密存储在 AODF 头部，解密后的 UUID 一致性由解密流程中的 compareUUID 验证
+    console.log(`   EncryptedUUID: ${aodfInfo.encryptedUuidHex.substring(0, 32)}...（已加密，无法直接比对）`);
 
     // 校验原始文件大小
     if (BigInt(aodkInfo.originalFileSize) !== BigInt(origStat.size)) {

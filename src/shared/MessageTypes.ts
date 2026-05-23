@@ -31,11 +31,18 @@ export type MainThreadMessage =
     | WorkerChunkResultMessage
     | WorkerHashResultMessage
     | WorkerErrorMessage
-    | WorkerDecryptReadyMessage;
+    | WorkerDecryptReadyMessage
+    | WorkerEncryptedUuidMessage
+    | WorkerDecryptedUuidMessage;
 
 /** 主线程 → Worker 消息 */
 export interface InitEncryptMessage {
     type: 'INIT_ENCRYPT';
+}
+
+export interface EncryptUuidMessage {
+    type: 'ENCRYPT_UUID';
+    uuid: Uint8Array;
 }
 
 export interface EncryptChunkMessage {
@@ -48,6 +55,11 @@ export interface InitDecryptMessage {
     type: 'INIT_DECRYPT';
     key: Uint8Array;
     header: Uint8Array;
+}
+
+export interface DecryptUuidMessage {
+    type: 'DECRYPT_UUID';
+    encryptedUuid: Uint8Array;
 }
 
 export interface DecryptChunkMessage {
@@ -65,7 +77,21 @@ export interface ComputeHashMessage {
 /** 主线程向 Worker 发送的消息联合类型 */
 export type WorkerMessage =
     | InitEncryptMessage
+    | EncryptUuidMessage
     | EncryptChunkMessage
     | InitDecryptMessage
+    | DecryptUuidMessage
     | DecryptChunkMessage
     | ComputeHashMessage;
+
+/* Worker → 主线程：加密后的 UUID */
+export interface WorkerEncryptedUuidMessage {
+    type: 'ENCRYPTED_UUID';
+    data: Uint8Array;
+}
+
+/* Worker → 主线程：解密后的 UUID */
+export interface WorkerDecryptedUuidMessage {
+    type: 'DECRYPTED_UUID';
+    uuid: Uint8Array;
+}
