@@ -18,7 +18,7 @@ import { execSync } from 'child_process';
 import { ROOT, OUT_DIR } from './config.mjs';
 import { buildBundle } from './bundle.mjs';
 
-const isDev = process.argv.includes('--dev');
+const isDev = process.argv.includes('dev');
 const devOpts = isDev ? { sourcemap: true, minify: false } : {};
 if (isDev) console.log('🔧 开发模式');
 
