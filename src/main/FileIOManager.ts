@@ -17,14 +17,21 @@ export class FSAAUnsupportedError extends Error {
     }
 }
 
+/** showSaveFilePicker 超时（毫秒），超过视为 API 不可用（如微信 X5 内核的假函数挂起） */
+const FSAA_TIMEOUT = 10_000;
+
 /** 单个文件保存（使用 showSaveFilePicker） */
 export async function createFileSaver(suggestedName: string): Promise<FileSaver> {
-    if (!('showSaveFilePicker' in window)) {
+    if (!('showSaveFilePicker' in window) || typeof (window as any).showSaveFilePicker !== 'function') {
         throw new FSAAUnsupportedError();
     }
     const start = performance.now();
     try {
-        const handle = await window.showSaveFilePicker!({ suggestedName });
+        const handle = await withTimeout(
+            window.showSaveFilePicker!({ suggestedName }),
+            FSAA_TIMEOUT,
+            'showSaveFilePicker 超时',
+        );
         const writable = await handle.createWritable();
         console.info(`[保存] FSAA showSaveFilePicker → ${suggestedName}`);
         return {
@@ -32,11 +39,29 @@ export async function createFileSaver(suggestedName: string): Promise<FileSaver>
             close: async () => { await writable.close(); },
         };
     } catch (err: any) {
-        // 快速 AbortError（< 200ms）—— API 损坏而非用户取消
-        if (err.name === 'AbortError' && performance.now() - start < 200) {
-            throw new FSAAUnsupportedError();
+        // 用户点击取消：AbortError 且耗时足够长（>200ms 说明对话框已正常显示）
+        if (err.name === 'AbortError' && performance.now() - start > 200) {
+            throw err; // 正常用户取消，往上抛
         }
-        throw err;
+        // 其他所有情况（TypeError / SecurityError / 快速 AbortError / 超时）→ API 不可用
+        throw new FSAAUnsupportedError();
+    }
+}
+
+/** 对 Promise 添加超时，超时时抛出 TimeoutError */
+async function withTimeout<T>(promise: Promise<T>, ms: number, label?: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+            const err = new Error(label ?? '超时');
+            err.name = 'TimeoutError';
+            reject(err);
+        }, ms);
+    });
+    try {
+        return await Promise.race([promise, timeout]);
+    } finally {
+        clearTimeout(timer);
     }
 }
 
@@ -48,9 +73,13 @@ export async function createFileSaverPair(
     aodfName: string,
 ): Promise<[FileSaver, FileSaver]> {
     // 优先使用 showDirectoryPicker ─ 一次选择，写入两个文件
-    if ('showDirectoryPicker' in window) {
+    if ('showDirectoryPicker' in window && typeof (window as any).showDirectoryPicker === 'function') {
         try {
-            const dirHandle = await window.showDirectoryPicker!({ mode: 'readwrite' });
+            const dirHandle = await withTimeout(
+                window.showDirectoryPicker!({ mode: 'readwrite' }),
+                FSAA_TIMEOUT,
+                'showDirectoryPicker 超时',
+            );
             const aodkHandle = await dirHandle.getFileHandle(aodkName, { create: true });
             const aodfHandle = await dirHandle.getFileHandle(aodfName, { create: true });
             const aodkWritable = await aodkHandle.createWritable();
@@ -63,7 +92,7 @@ export async function createFileSaverPair(
             return [make(aodkWritable), make(aodfWritable)];
         } catch (err: any) {
             // 目录选择器被取消或不可用，降级到两次 showSaveFilePicker
-            if (err.name === 'AbortError' || err.name === 'SecurityError') {
+            if (err.name === 'AbortError' || err.name === 'SecurityError' || err.name === 'TimeoutError') {
                 console.info('[保存] showDirectoryPicker 不可用，降级到 showSaveFilePicker');
             } else {
                 throw err;

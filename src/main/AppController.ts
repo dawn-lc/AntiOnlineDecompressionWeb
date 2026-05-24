@@ -99,6 +99,7 @@ export class AppController {
         } catch (err: any) {
             if (err.name === 'FSAAUnsupportedError') {
                 showFSAAUnsupportedOverlay();
+                this.eventBus.emit('statusChange', 'idle');
                 return;
             }
             if (err.name === 'AbortError') {
@@ -380,6 +381,7 @@ export class AppController {
             try { outputSaver?.close(); } catch { /* 忽略 */ }
             if (err.name === 'FSAAUnsupportedError') {
                 showFSAAUnsupportedOverlay();
+                this.eventBus.emit('statusChange', 'idle');
                 return;
             }
             if (err.name === 'AbortError' || err.name === 'SecurityError') {
