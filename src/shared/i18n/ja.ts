@@ -44,6 +44,18 @@ const ja: LocaleMessages = {
 
     'browser.openEdge': 'Microsoft Edge で開く',
     'browser.openChrome': 'Google Chrome で開く',
+
+    'about.title': '📖 このツールについて',
+    'why.title': '🤔 なぜ「オンライン解凍防止」が必要なのか？',
+    'philosophy.what': '「オンライン解凍防止」とは？',
+    'philosophy.whatDesc': 'クラウドストレージによるファイルの自動スキャンを防ぎます。ファイルをアップロードすると、バックグラウンドで密かに解凍・スキャンされる可能性があります——あなたの知らないところで。',
+    'philosophy.problemTitle': '従来の方法',
+    'philosophy.problem.unencrypted': '通常のファイルは直接スキャンされ、内容が完全に公開されます',
+    'philosophy.problem.encrypted': 'パスワード付きアーカイブも、「オンライン解凍」でパスワードが入力されればサービス側が自由にスキャンできます',
+    'philosophy.solution': 'キー-データ分離設計',
+    'philosophy.solutionDesc1': '暗号化後、<strong>AODK（鍵）</strong> と <strong>AODF（暗号化データ）</strong> の2つのファイルが生成され、両方が揃わないと復号できません',
+    'philosophy.solutionDesc2': 'AODKファイルはわずか数百バイトで、<strong>あなたが安全だと確信できる経路で別途配布</strong>し、暗号化データと一緒に絶対にアップロードしないでください',
+    'philosophy.solutionDesc3': 'AODFファイルは<strong>あらゆる経路（クラウドストレージ、メール、SNS等）で自由に配布</strong>でき、サービス側は内容をスキャンできません',
 };
 
 export default ja;

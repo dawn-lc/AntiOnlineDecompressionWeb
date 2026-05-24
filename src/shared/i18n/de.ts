@@ -44,6 +44,18 @@ const de: LocaleMessages = {
 
     'browser.openEdge': 'Mit Microsoft Edge öffnen',
     'browser.openChrome': 'Mit Google Chrome öffnen',
+
+    'about.title': '📖 Über dieses Tool',
+    'why.title': '🤔 Warum Anti-Online-Dekompression?',
+    'philosophy.what': 'Was ist «Anti-Online-Dekompression»?',
+    'philosophy.whatDesc': 'Verhindert, dass Cloud-Speicher Ihre Dateien automatisch scannen. Wenn Sie Dateien hochladen, können diese im Hintergrund heimlich dekomprimiert und gescannt werden — ob Sie es wissen oder nicht.',
+    'philosophy.problemTitle': 'Traditioneller Ansatz',
+    'philosophy.problem.unencrypted': 'Normale Dateien werden direkt gescannt, der Inhalt ist vollständig transparent',
+    'philosophy.problem.encrypted': 'Passwortgeschützte Archive scheinen sicher, aber sobald jemand die «Online-Dekompression» verwendet und das Passwort eingibt, kann der Dienst Ihr Archiv frei scannen',
+    'philosophy.solution': 'Schlüssel-Daten-Trennung',
+    'philosophy.solutionDesc1': 'Die Verschlüsselung erzeugt zwei Dateien: <strong>AODK (Schlüssel)</strong> und <strong>AODF (Verschlüsselte Daten)</strong> — beide werden zum Entschlüsseln benötigt',
+    'philosophy.solutionDesc2': 'Die AODK-Datei ist winzig (nur wenige hundert Bytes) und sollte <strong>separat über Kanäle verteilt werden, die Sie für sicher halten</strong>, niemals zusammen mit den verschlüsselten Daten hochgeladen',
+    'philosophy.solutionDesc3': 'Die AODF-Datei kann <strong>über jeden Kanal (Cloud-Speicher, E-Mail, Instant Messaging usw.) frei verteilt</strong> werden — der Dienstanbieter kann ihren Inhalt nicht scannen',
 };
 
 export default de;

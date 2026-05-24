@@ -31,6 +31,18 @@
     'browser.unsupportedHttpsDesc': string;
     'browser.openEdge': string;
     'browser.openChrome': string;
+
+    'about.title': string;
+    'why.title': string;
+    'philosophy.what': string;
+    'philosophy.whatDesc': string;
+    'philosophy.problemTitle': string;
+    'philosophy.problem.unencrypted': string;
+    'philosophy.problem.encrypted': string;
+    'philosophy.solution': string;
+    'philosophy.solutionDesc1': string;
+    'philosophy.solutionDesc2': string;
+    'philosophy.solutionDesc3': string;
 }
 
 export type Locale = 'zh-CN' | 'en' | 'ja' | 'ko' | 'fr' | 'de';

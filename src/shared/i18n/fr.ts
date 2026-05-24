@@ -44,6 +44,18 @@ const fr: LocaleMessages = {
 
     'browser.openEdge': 'Ouvrir avec Microsoft Edge',
     'browser.openChrome': 'Ouvrir avec Google Chrome',
+
+    'about.title': '📖 À propos de cet outil',
+    'why.title': '🤔 Pourquoi l\'Anti Décompression en Ligne ?',
+    'philosophy.what': 'Qu\'est-ce que l\'« Anti Décompression en Ligne » ?',
+    'philosophy.whatDesc': 'Empêcher les services de stockage cloud d\'analyser automatiquement vos fichiers. Lorsque vous téléchargez des fichiers, ils peuvent secrètement les décompresser et les analyser en arrière-plan — que vous le sachiez ou non.',
+    'philosophy.problemTitle': 'Approche traditionnelle',
+    'philosophy.problem.unencrypted': 'Les fichiers ordinaires sont scannés directement, leur contenu est totalement transparent',
+    'philosophy.problem.encrypted': 'Les archives protégées par mot de passe semblent sûres, mais si quelqu\'un utilise la « décompression en ligne » et entre le mot de passe, le service peut scanner librement votre archive',
+    'philosophy.solution': 'Conception à séparation clé-données',
+    'philosophy.solutionDesc1': 'Le chiffrement produit deux fichiers : <strong>AODK (Clé)</strong> et <strong>AODF (Données chiffrées)</strong> — les deux sont nécessaires pour déchiffrer',
+    'philosophy.solutionDesc2': 'Le fichier AODK est minuscule (quelques centaines d\'octets) et doit être <strong>distribué séparément via des canaux que vous estimez sécurisés</strong>, jamais téléchargé avec les données chiffrées',
+    'philosophy.solutionDesc3': 'Le fichier AODF peut être distribué librement via <strong>n\'importe quel canal (stockage cloud, email, messagerie instantanée, etc.)</strong> — le fournisseur de services ne peut pas scanner son contenu',
 };
 
 export default fr;

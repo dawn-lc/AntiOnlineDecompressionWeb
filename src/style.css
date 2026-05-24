@@ -415,6 +415,79 @@ h1 small {
     background: var(--accent-hover);
 }
 
+.philosophy-section {
+    max-width: 800px;
+    margin: 48px auto 0;
+}
+
+.philosophy-section h2 {
+    font-size: clamp(16px, 2.5vw, 20px);
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.philosophy-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+}
+
+.philosophy-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.philosophy-card p {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.8;
+}
+
+.philosophy-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.philosophy-card li {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.8;
+    padding: 4px 0 4px 20px;
+    position: relative;
+}
+
+.philosophy-card li::before {
+    content: '•';
+    position: absolute;
+    left: 4px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.philosophy-card li strong {
+    color: var(--text);
+}
+
+.philosophy-problem li::before {
+    color: var(--danger);
+}
+
+.philosophy-solution {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+
+.philosophy-solution li::before {
+    color: var(--success);
+}
+
 @media (max-width: 480px) {
     .card {
         padding: 14px;
@@ -426,6 +499,10 @@ h1 small {
 
     .decrypt-file-row {
         padding: 10px 12px;
+    }
+
+    .philosophy-card {
+        padding: 16px;
     }
 }
 

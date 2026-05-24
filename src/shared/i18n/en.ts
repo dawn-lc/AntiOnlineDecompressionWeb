@@ -44,6 +44,18 @@ const en: LocaleMessages = {
 
     'browser.openEdge': 'Open with Microsoft Edge',
     'browser.openChrome': 'Open with Google Chrome',
+
+    'about.title': '📖 About This Tool',
+    'why.title': '🤔 Why Anti Online Decompression?',
+    'philosophy.what': 'What is "Anti Online Decompression"?',
+    'philosophy.whatDesc': 'Preventing cloud storage services from automatically scanning your files. When you upload files to certain cloud drives, they may secretly decompress and scan your content in the background — whether you know it or not.',
+    'philosophy.problemTitle': 'Traditional Approach',
+    'philosophy.problem.unencrypted': 'Plain files are scanned directly, content is completely transparent',
+    'philosophy.problem.encrypted': 'Password-protected archives seem safe, but once someone uses "online decompression" and enters the password, the service can scan your archive freely',
+    'philosophy.solution': 'Key-Data Separation Design',
+    'philosophy.solutionDesc1': 'Encryption produces two files: <strong>AODK (Key)</strong> and <strong>AODF (Encrypted Data)</strong> — both are required to decrypt',
+    'philosophy.solutionDesc2': 'The AODK file is tiny (only a few hundred bytes) and should be <strong>distributed separately via channels you trust to be secure</strong>, never uploaded alongside the encrypted data',
+    'philosophy.solutionDesc3': 'The AODF file can be freely distributed via <strong>any channel (cloud storage, email, instant messaging, etc.)</strong> — the service provider cannot scan its contents',
 };
 
 export default en;
