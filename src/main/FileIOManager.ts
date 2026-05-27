@@ -93,10 +93,10 @@ export async function createFileSaverPair(
                 FSAA_TIMEOUT,
                 'showDirectoryPicker 超时',
             );
-            const aodkHandle = await dirHandle.getFileHandle(aodkName, { create: true });
             const aodfHandle = await dirHandle.getFileHandle(aodfName, { create: true });
-            const aodkWritable = await aodkHandle.createWritable();
+            const aodkHandle = await dirHandle.getFileHandle(aodkName, { create: true });
             const aodfWritable = await aodfHandle.createWritable();
+            const aodkWritable = await aodkHandle.createWritable();
             console.info(`[保存] showDirectoryPicker → ${aodkName}, ${aodfName}`);
             const make = (w: FileSystemWritableFileStream): FileSaver => ({
                 write: async (data) => { await w.write(data); },
