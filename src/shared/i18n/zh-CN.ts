@@ -54,8 +54,8 @@ const zhCN: LocaleMessages = {
     'philosophy.problem.encrypted': '带密码的加密压缩包看似安全，但只要有人使用了"在线解压"并输入密码，服务方就可以畅通无阻地扫描',
     'philosophy.solution': '密钥-数据分离设计',
     'philosophy.solutionDesc1': '加密后产生两个文件：<strong>AODK（密钥）</strong> 和 <strong>AODF（加密数据）</strong>，必须同时拥有才能解密',
-    'philosophy.solutionDesc2': 'AODK 文件极小（仅几百字节），应<strong>在你确定安全的渠道单独分发</strong>，绝不随加密数据一起上传',
-    'philosophy.solutionDesc3': 'AODF 文件即使上传至任何云存储，服务方也无法扫描其内容，可<strong>通过任意渠道（网盘、邮件、即时通讯等）自由分发</strong>',
+    'philosophy.solutionDesc2': 'AODK 文件极小（仅几百字节），应在<strong>你确定安全的渠道</strong>单独分发，绝不随加密数据一起上传',
+    'philosophy.solutionDesc3': 'AODF 文件即使上传至任何云存储，服务方也无法扫描其内容，可通过<strong>任意渠道（网盘、邮件、即时通讯等）</strong>自由分发',
 };
 
 export default zhCN;
