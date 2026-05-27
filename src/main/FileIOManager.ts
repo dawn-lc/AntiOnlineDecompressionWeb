@@ -66,13 +66,26 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label?: string): 
 }
 
 /** 一次性选择目录，同时创建 AODK + AODF 两个文件的 FileSaver
- * 避免连续两次 showSaveFilePicker 在部分平台（如 Android）上第二个调用失败的问题。
- * 若 showDirectoryPicker 不可用，降级为两次独立的 showSaveFilePicker。 */
+ * 优先尝试两次独立的 showSaveFilePicker（各选一次文件），
+ * 若 FSAA 不可用则降级为 showDirectoryPicker（一次选目录写入两个文件）。 */
 export async function createFileSaverPair(
     aodkName: string,
     aodfName: string,
 ): Promise<[FileSaver, FileSaver]> {
-    // 优先使用 showDirectoryPicker ─ 一次选择，写入两个文件
+    // 优先使用 showSaveFilePicker ─ 用户分别选两个保存位置（先 aodf 再 aodk）
+    try {
+        const b = await createFileSaver(aodfName);
+        const a = await createFileSaver(aodkName);
+        return [a, b];
+    } catch (err: any) {
+        // 只有 FSAA 不可用时才降级（用户正常取消应继续抛出）
+        if (!(err instanceof FSAAUnsupportedError)) {
+            throw err;
+        }
+        console.info('[保存] showSaveFilePicker 不可用，降级到 showDirectoryPicker');
+    }
+
+    // 降级：showDirectoryPicker ─ 一次选择目录，写入两个文件
     if ('showDirectoryPicker' in window && typeof (window as any).showDirectoryPicker === 'function') {
         try {
             const dirHandle = await withTimeout(
@@ -91,20 +104,14 @@ export async function createFileSaverPair(
             });
             return [make(aodkWritable), make(aodfWritable)];
         } catch (err: any) {
-            // 目录选择器被取消或不可用，降级到两次 showSaveFilePicker
             if (err.name === 'AbortError' || err.name === 'SecurityError' || err.name === 'TimeoutError') {
-                console.info('[保存] showDirectoryPicker 不可用，降级到 showSaveFilePicker');
-            } else {
-                throw err;
+                console.info('[保存] showDirectoryPicker 也不可用');
             }
+            throw err;
         }
     }
 
-    // 降级：两次独立的 showSaveFilePicker
-    return [
-        await createFileSaver(aodkName),
-        await createFileSaver(aodfName),
-    ];
+    throw new FSAAUnsupportedError();
 }
 
 export class FileIOManager {
